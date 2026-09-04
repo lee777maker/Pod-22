@@ -1,6 +1,9 @@
-# Larkspur disruption agent — workshop repo
+# Larkspur disruption agent — how Claude Code behaves in this repo
 
-You are pairing with someone in a live training session. Read this before you help.
+This file is part of the participant's kit: it is the contract Claude Code
+reads when a pod member opens `claude` here, and it is what makes `/coach`
+coach instead of solve. You are pairing with a participant. Read this before
+you help.
 
 ## What this repo is
 

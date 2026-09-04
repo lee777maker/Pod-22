@@ -5,6 +5,12 @@ tools that already work (`support/tools.py`, backed by real airline fixture
 data in `data/americas/`). Your job is `agent.py`: the tool schemas Claude
 sees, and the loop that drives them.
 
+**The build itself runs on the workshop site** — your facilitator gives you
+the link and opens each block with a code. Every step's moves, commands and
+gates live there, and the case study (the client, the ask, the five ticket
+shapes) is the site's Case tab. This repo carries three things: your setup,
+the case data, and the scripts the steps call.
+
 Five to seven people share this one repo. Read "One repo, five to seven
 people" below before the first build, because it is the part that goes wrong.
 
@@ -59,7 +65,7 @@ Block 2 turns a set of laptops into a pod. Ten minutes, four steps.
    python3 ready.py --name "Your Name" --stamp
    ```
    `ready.py` is the Block 2 command. It runs the laptop checks, the pod checks
-   and the forward checks for both sessions in one board, prints your two site
+   and the forward checks in one board, prints your two site
    codes, and `--stamp` pushes your `ready/<you>.md` receipt to the repo.
 
 Two codes come out of this, and they are different on purpose:
@@ -107,35 +113,24 @@ person, so five people can push at once and never collide.
 
 ---
 
-## The four builds
+## The scripts the site's steps call
 
-| Build | Block | Gate | What the canon push carries | Who pushes |
-|---|---|---|---|---|
-| 1 — tool schemas, the loop, prove it generalizes | 5 | `verify.py 2`, `3`, then `4` | `agent.py`, `readout.html` | one person, once the pod agrees whose passed |
-| 2 — the tools you decided you need | 7 | `verify.py 7` | `agent.py`, `build2_probe.txt`, `readout.html` | the pod's committer for that block |
-| 3 — build what the client sees: eval cases and the pitch | 13 | `verify.py 6` | `agent.py`, `PITCH.md`, `readout.html` | the pod's committer for that block |
-| 4 — pull your lever, measure it | 15 | `verify.py 5` | `agent.py`, `PITCH.md`, `readout.html` | the pod's committer for that block |
+| Script | What it does |
+|---|---|
+| `doctor.py` | Pre-work: diagnoses this laptop; `--fix` builds the venv. |
+| `ready.py --name "You"` | The wiring check: laptop, pod, session, your two codes. `--stamp` pushes your receipt. |
+| `run.py <PNR> --trace` | Runs the agent on one ticket and shows every turn on the wire. `--all` runs the five shapes and writes the totals. |
+| `verify.py <n>` | A gate: checks behavior on the wire, prints your evidence code. No number = your status board. |
+| `pod_sync.py` | The pod's canon: `--push-canon` (the block's committer), `--take-canon` (everyone else), `--status`. |
+| `eval_harness.py` | Runs `evals/cases.json` — your pod's own cases — against your agent. |
+| `bench.py --label <name>` | Measures a run: latency, tokens, cache, cost per contact. The before/after pair around your lever. |
+| `readout.py` | Renders the one-page readout the canon push publishes. |
 
-`evals/cases.json` is a normal commit, not a canon file — it is the pod's
-shared record and it does not thrash the way `agent.py` does. The bench pair
-Build 4 produces never leaves your laptop: `.workshop/` is gitignored, and
+Which script, at which moment, with which arguments: the site says so on the
+step you are standing on. `evals/cases.json`, `PITCH.md`, `TEAM.md`, `team/`,
+`ready/` and `spec/` are the pod's shared record — normal commits. The bench
+pair never leaves your laptop: `.workshop/` is gitignored, and
 `bench-before.json` is a measurement of an agent that no longer exists.
-
-Each build ends the same way:
-
-```bash
-python3 verify.py <n>              # the gate, on your own laptop
-python3 pod_sync.py --push-canon   # the block's committer, once
-python3 pod_sync.py --take-canon   # everyone else
-```
-
-`--push-canon` refuses if that gate has not passed on your laptop, because the
-canon is the version that passed, not the newest one. `--take-canon` warns if
-your own gate has not passed yet, because the block is where the learning is
-and the canon is the answer. Out of time? `--take-canon --force` is there, on
-purpose, and it still saves your version first.
-
-`python3 verify.py` with no step number prints your status board.
 
 ## Ground rule
 
@@ -165,4 +160,4 @@ It does not restore anything gitignored, and that list matters:
 So if you are about to re-clone into a fresh folder, copy `.workshop/` across
 first, then copy it back in. If it is already gone, tell a facilitator rather
 than re-running `bench.py --label before` against the current agent: that
-number would be a fiction, and the whole day 2 claim rests on it.
+number would be a fiction, and your pod's lever claim rests on it.
