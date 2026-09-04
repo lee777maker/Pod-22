@@ -26,7 +26,7 @@ from __future__ import annotations
 from typing import Any, Dict, List
 
 from support import (MODEL, SYSTEM_PROMPT, Tracer, execute_tool, get_client,
-                     reset_call_log, runtime_preamble, wrap)
+                     record_tool_result, reset_call_log, runtime_preamble, wrap)
 
 MAX_TOOL_CALLS = 8  # Larkspur's own week-2 build capped the loop at eight API
                     # turns — after that, a human takes over. Same number, same
@@ -44,7 +44,7 @@ MAX_TOOL_CALLS = 8  # Larkspur's own week-2 build capped the loop at eight API
 # EXTRA_TOOLS is Build 2's: schemas for the tools you decided you need, executed
 # by LOCAL_TOOLS at the bottom of this file rather than by support/tools.py.
 # =============================================================================
-TONE_ADDENDUM = ""  # ✏️ YOUR TURN (Block 13, intelligence lane)
+TONE_ADDENDUM = ""  # ✏️ YOUR TURN (Block 15, intelligence lane)
 
 EXTRA_TOOLS: List[Dict[str, Any]] = []  # ✏️ YOUR TURN (Block 7, Build 2)
 
@@ -84,6 +84,9 @@ def tool_results(response) -> List[Dict[str, Any]]:
                 output = LOCAL_TOOLS[block.name](**block.input)
             except TypeError as exc:
                 output = {"error": "Bad arguments for %s: %s" % (block.name, exc)}
+            # execute_tool does this for the given nine. Do it here too, so the
+            # trace — and the eval judge reading it — sees what YOUR tool answered.
+            record_tool_result(block.name, output)
         else:
             output = execute_tool(block.name, block.input)
         results.append({
@@ -99,9 +102,11 @@ def tool_results(response) -> List[Dict[str, Any]]:
 #
 # RUN IT FIRST:  python3 run.py --show-tools
 # It prints exactly what Claude receives about each tool. Read the
-# search_alternatives entry. Its description is one word. Claude picks tools
-# from that string alone — it cannot see support/tools.py, and it cannot ask
-# you what the function actually does.
+# search_alternatives entry. Its description is one word. That description is
+# the main routing surface — Claude cannot see support/tools.py and cannot ask
+# you what the function actually does — and the field descriptions inside
+# input_schema route too: an argument description that over-constrains is a
+# routing failure that looks like judgement.
 # =============================================================================
 def build_tools() -> List[Dict[str, Any]]:
     """Anthropic-shaped tool schemas — name, description, input_schema. The
@@ -147,10 +152,7 @@ def build_tools() -> List[Dict[str, Any]]:
             # underneath is already correct.
             #
             # Write the description a new hire would need: when to call this,
-            # what it needs to already know (hint: it takes only a pnr — origin,
-            # destination, date and cabin are all derived from the booking so a
-            # search can't be pointed at a route the customer never had), and
-            # what a result looks like.
+            # what it needs to already know, and what a result looks like.
             "name": "search_alternatives",
             "description": "search",
             "input_schema": {
@@ -288,18 +290,11 @@ def run_agent(pnr: str, last_name: str, message: str) -> str:
         thinking={"type": "adaptive"}, tools=tools, messages=messages,
     )
 
-    # ✏️ YOUR TURN — this is a loop with the loop missing.
+    # ✏️ YOUR TURN — this is a loop with the loop missing. One call went out;
+    # Claude asked for a tool; nothing answered it. What has to reach the model
+    # before it can carry on — and what stops it from carrying on forever?
     #
-    # Everything above is correct. What's missing is that when Claude comes
-    # back with stop_reason == "tool_use", you have to:
-    #     1. append the assistant's response.content to messages — UNCHANGED
-    #        (it may contain thinking blocks; dropping them breaks the next call)
-    #     2. append tool_results(response) as a user message
-    #     3. call the API again
-    #     4. keep going until stop_reason is something else, or you hit
-    #        MAX_TOOL_CALLS turns — then stop and hand off, don't loop forever
-    #
-    # tool_results() is written for you above. Use it.
+    # (tool_results() above is written for you. MAX_TOOL_CALLS is the ceiling.)
 
     return text_of(response)
 
@@ -320,9 +315,10 @@ def run_agent(pnr: str, last_name: str, message: str) -> str:
 # BUILD 2 (Block 7) — add the tools you decided you need, then measure them
 #
 # RUN IT:  python3 verify.py 7
-# Teach 2 ends with you arguing for tools. This is where you add them. Define
-# the schema in EXTRA_TOOLS above, implement the function here, register it in
-# LOCAL_TOOLS, and the loop picks it up — nothing in support/ changes.
+# Block 7 opens with you arguing for the tools this agent is missing. This is
+# where you add them. Define the schema in EXTRA_TOOLS above, implement the
+# function here, register it in LOCAL_TOOLS, and the loop picks it up —
+# nothing in support/ changes.
 #
 # One is scaffolded because the backend already answers it and no current tool
 # asks: a cancelled customer's first question is "when CAN I fly?", and today
@@ -342,14 +338,19 @@ def run_agent(pnr: str, last_name: str, message: str) -> str:
 # =============================================================================
 def next_available_day(origin: str, dest: str, date: str, cabin: str = "Y"):
     """Given. The earliest date with an open seat — the backend function existed
-    all along; nobody had given Claude a way to call it."""
+    all along; nobody had given Claude a way to call it.
+
+    pax_count never crosses this wrapper on purpose: the backend then answers
+    for a party of one, and finding that gap is Build 3's capacity case.
+    """
     from support import mock_backend
     return mock_backend.earliest_alternative_date(origin, dest, date, cabin)
 
 
 # ✏️ YOUR TURN — schema for next_available_day goes in EXTRA_TOOLS above.
-# Claude picks tools from the description string alone. Say when to call it,
-# what it needs, and what comes back. Then register the function:
+# The description is the main routing surface, and the field descriptions
+# inside input_schema route too. Say when to call it, what it needs, and what
+# comes back. Then register the function:
 LOCAL_TOOLS: Dict[str, Any] = {
     # "next_available_day": next_available_day,
 }

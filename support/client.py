@@ -5,7 +5,10 @@ This file is GIVEN. It exists so that "it doesn't work" is never ambiguous.
 YOU DO NOT NECESSARILY NEED AN API KEY. The SDK resolves credentials in this
 order, first match wins:
 
-  1. LARKSPUR_OFFLINE=1         the offline simulator — no key, no network
+  1. LARKSPUR_OFFLINE=1         the offline simulator — NOT BUILT in this pack.
+                                The flag is wired up so it fails with a sentence
+                                instead of a stack trace; it is not a way to
+                                work without a credential.
   2. ANTHROPIC_API_KEY          a key, from your environment or a local .env
   3. ANTHROPIC_AUTH_TOKEN       a bearer token
   4. an OAuth profile           from `ant auth login` — your normal Claude login,

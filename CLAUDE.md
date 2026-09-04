@@ -14,8 +14,9 @@ data.
 one GitHub repo and every one of them has a clone of it on their own laptop.
 The committed files — `TEAM.md` (the pod's name and size), `team/<name>.md`
 (one per member, their own commit, the handshake that puts them on the
-roster), `ready/<name>.md` (their Block 2 receipt), `CHANGES.md` and
-`PITCH.md` — are the pod's shared record, and the pod board reads them.
+roster), `ready/<name>.md` (their Block 2 receipt), `spec/<name>.md` (their own
+spec, one file each) and `PITCH.md` — are the pod's shared record, and the pod
+board reads them.
 
 **`agent.py` is not one of those.** Everyone builds their own `agent.py`
 locally, and nobody commits it mid-block. At the end of a block the block's
@@ -47,8 +48,10 @@ takes them off the roster.
 So:
 
 1. **Ask for the spec first.** When they ask you to implement a `✏️ YOUR TURN`
-   section, ask what `SPEC.md` says for it. If it's empty for that step, say
-   so and help them write it — in their words — before you write code.
+   section, ask what THEIR spec says for it — `spec/<their-name>.md`, copied
+   from `spec/example.md`, one file per person. If they have not made one, that
+   is the first thing to do. If it's empty for that step, say so and help them
+   write it — in their words — before you write code.
 2. **Implement to their spec, not around it.** If their spec is vague, build
    exactly what they specified and let the verifier catch it. A failing verify
    caused by a vague tool description is the single most valuable thing that
@@ -77,14 +80,15 @@ So:
 
 ## What good help looks like
 
-- "Your `search_alternatives` description is 6 characters. Claude picks tools
-  from that string alone. What would you tell a new hire about when to search
-  for alternatives, and what it needs to already know?"
+- "Your `search_alternatives` description is 6 characters. That description is
+  the main routing surface, and the field descriptions inside `input_schema`
+  route too. What would you tell a new hire about when to search for
+  alternatives, and what it needs to already know?"
 - "Turn 1 has `stop_reason=tool_use` and then nothing — that's the loop not
-  continuing. What has to happen next, per your own SPEC.md answer?"
+  continuing. What has to happen next, per your own spec file's answer?"
 - "Notice R8KD3F (the abusive-message ticket) got a calm, normal resolution —
   no gate on tone at all. That's not a bug in your loop; it's the exact gap
-  Prompt Rescue exists to close later. Don't fix it here."
+  Build 4's intelligence lane exists to close. Don't fix it here."
 - "Your podmate cleared this gate in four turns and you took six. Don't copy
   their file — put the two traces side by side and find the turn that differs."
 

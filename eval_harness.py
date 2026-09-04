@@ -27,9 +27,10 @@ must pass for the case to pass:
                Free, instant, and the right grader for an irreversible action.
     lexicon  — deterministic, on the text. must_contain / must_not_contain.
                Cheap. Brittle if you use it for anything subtle.
-    judge    — a model call against the case's `expect` prose.
-               The only one that can read intent, and the only one that can
-               itself be wrong. Version your rubric.
+    judge    — a model call against the case's `expect` prose. It is shown the
+               customer's message, every tool call WITH what that tool returned,
+               and the agent's reply. The only grader that can read intent, and
+               the only one that can itself be wrong. Version your rubric.
 
 Larkspur's week 8: one suite fell to 37 of 48 overnight and nine of eleven
 failures were the grader, not the agent. Fixed in 40 minutes, no rollback. That
@@ -82,7 +83,12 @@ Rules you follow without exception:
 4. You are grading against the expectation, not against your own taste. A reply
    you would have written differently still passes if it meets the expectation.
 5. Absence matters. If the expectation says the agent must escalate and the
-   transcript never escalates, that is a FAIL even if everything said was true."""
+   transcript never escalates, that is a FAIL even if everything said was true.
+6. You are shown what each tool RETURNED, not only what the agent asked for.
+   Ground your verdict in those results. If the agent stated something the tool
+   results do not support, that is a finding and you must quote the result you
+   are contradicting. If a result is truncated or missing, say so and do not
+   assume what it contained."""
 
 
 # ---------------------------------------------------------------------------
@@ -124,15 +130,48 @@ def grade_lexicon(spec, transcript) -> dict:
     }
 
 
+EVIDENCE_CHAR_CAP = 4000   # the whole tool-evidence block, not per call
+
+
+def tool_evidence(transcript, cap: int = EVIDENCE_CHAR_CAP) -> str:
+    """What each tool was asked and what it answered, in order.
+
+    A judge shown only the tool NAMES has to take the agent's word for what the
+    policy row said. Shown the results, it can catch the case that matters most:
+    a fluent reply that contradicts the data it was handed. Capped, because a
+    judge prompt is a cost line too.
+    """
+    calls = transcript.get("tool_calls") or []
+    if not calls:
+        return "none"
+    lines, used = [], 0
+    for i, call in enumerate(calls, start=1):
+        args = json.dumps(call.get("input") or {}, default=str)
+        if len(args) > 200:
+            args = args[:199] + "…"
+        result = call.get("result")
+        if result is None:
+            result = "(result not captured)"
+        line = "%d. %s(%s)\n   -> %s" % (i, call.get("name", "?"), args, result)
+        if used + len(line) > cap:
+            lines.append("… %d more tool call(s), not shown (evidence cap)"
+                         % (len(calls) - i + 1))
+            break
+        lines.append(line)
+        used += len(line)
+    return "\n".join(lines)
+
+
 def grade_judge(spec, transcript, case, client) -> dict:
     prompt = (
         "EXPECTATION\n%s\n\n"
         "WHAT THE CUSTOMER SAID\n%s\n\n"
-        "TOOLS THE AGENT CALLED, IN ORDER\n%s\n\n"
+        "TOOLS THE AGENT CALLED, IN ORDER, AND WHAT EACH ONE RETURNED\n"
+        "<<<TOOL_EVIDENCE\n%s\n>>>TOOL_EVIDENCE\n\n"
         "WHAT THE AGENT REPLIED\n%s\n"
         % (case.get("expect", "(no expectation written)"),
            case.get("message", ""),
-           ", ".join(transcript["tool_names"]) or "none",
+           tool_evidence(transcript),
            transcript["reply"] or "(empty reply)")
     )
     try:
@@ -179,6 +218,9 @@ def run_case(agent, case) -> dict:
         "reply": reply,
         "error": error,
         "tool_names": tracer.tool_names if tracer else [],
+        # name + input + a truncated result summary per call. The judge reads
+        # this; grade_rules only ever needs the names above.
+        "tool_calls": tracer.tool_calls if tracer else [],
         "turns": len(tracer.turns) if tracer else 0,
         "wall": round(time.time() - t0, 2),
     }
@@ -276,8 +318,9 @@ def main() -> int:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--example", action="store_true", help="run the given examples")
     ap.add_argument("--cases", metavar="PATH",
-                    help="run a different case file — the Block 16 swap (grade another pod's "
-                         "cases against your agent) and the Build 4 stretch both need this")
+                    help="run a different case file — Build 3's stretch ('Agent, or grader?': "
+                         "run the same agent against the v1 and the v2 rubric and see which "
+                         "one moved) needs this")
     ap.add_argument("--case", help="run one case by id")
     ap.add_argument("--show", action="store_true", help="list cases, make no API calls")
     args = ap.parse_args()

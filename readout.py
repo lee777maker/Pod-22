@@ -11,6 +11,10 @@ Two halves, one self-contained HTML file — readout.html at the repo root:
   length, the loop ceiling, the prompt sizes, what you've added beyond the
   given nine. This is the "what we built" half of your pod's submission.
 
+  ALL FIVE SHAPES — the totals from your last `run.py --all`, if you have run
+  one: turns, tool calls and tokens per shape, and where a loop ended still
+  asking. This is the "prove it generalizes" half.
+
   THE LOOP — your latest wire trace, drawn as the loop it actually was: each
   API turn, what went up, what came back, which tools fired, and where
   stop_reason finally changed. This is the "prove it ran" half.
@@ -40,6 +44,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
 DEFAULT_TRACE = os.path.join(HERE, ".workshop", "last_trace.json")
+# Written by `python3 run.py --all`: every Stage 1 shape, plus the totals. The
+# single trace below it is one conversation; this is the run that generalizes.
+LAST_RUN_PATH = os.path.join(HERE, ".workshop", "last_run.json")
 # The readout is the pod's submission: it lives at the repo ROOT (committed and
 # pushed, unlike .workshop/, which is gitignored). Pushing it IS submitting it.
 OUT_PATH = os.path.join(HERE, "readout.html")
@@ -107,6 +114,16 @@ def read_pod() -> str:
     return ""
 
 
+def read_last_run() -> dict:
+    """The --all aggregate, or {} if nobody has run all five shapes yet."""
+    try:
+        with open(LAST_RUN_PATH) as f:
+            payload = json.load(f)
+    except (OSError, ValueError):
+        return {}
+    return payload if payload.get("totals") else {}
+
+
 def read_banked() -> dict:
     """What this laptop has banked, out of the gitignored profile. The page
     carries a copy because .workshop/ never travels with a clone — without it a
@@ -167,7 +184,47 @@ def esc(s) -> str:
     return html.escape(str(s), quote=True)
 
 
-def render(arch: dict, trace: dict, pod: str, trace_path: str, evidence: dict) -> str:
+def render_all_shapes(out: list, last_run: dict) -> None:
+    """The --all totals, above the single trace. One conversation proves the
+    loop runs; five shapes through the same function prove it generalizes, and
+    that is the half a sponsor asks about."""
+    totals = last_run.get("totals") or {}
+    rows = last_run.get("shapes") or []
+    out.append("<h2>All five shapes — what it did across the set</h2>")
+    out.append("<p class='sub'>python3 run.py --all · %s</p>"
+               % esc(last_run.get("generated", "")))
+    out.append("<div class='strip'>")
+    for value, label in [
+        ("%s/%s" % (totals.get("resolved", "?"), totals.get("shapes", "?")), "returned text"),
+        (totals.get("turns", "?"), "API turns, total"),
+        (totals.get("tool_calls", "?"), "tool calls, total"),
+        ("{:,}".format(totals.get("tokens_in", 0)), "tokens in, total"),
+        ("{:,}".format(totals.get("tokens_out", 0)), "tokens out, total"),
+    ]:
+        out.append("<div class='stat'><b>%s</b><span>%s</span></div>" % (esc(value), esc(label)))
+    out.append("</div>")
+    if rows:
+        out.append("<table><tr><th>pnr</th><th>shape</th><th>turns</th><th>tools</th>"
+                   "<th>in</th><th>out</th><th>stop_reason</th></tr>")
+        for r in rows:
+            stop = r.get("stop_reason")
+            flag = "" if stop != "tool_use" else " class='yours'"
+            out.append("<tr%s><td><span class='pill'>%s</span></td><td>%s</td><td>%s</td>"
+                       "<td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>"
+                       % (flag, esc(r.get("pnr", "?")), esc(r.get("shape", "")),
+                          esc(r.get("turns", "?")), esc(r.get("tool_calls", "?")),
+                          "{:,}".format(r.get("tokens_in", 0) or 0),
+                          "{:,}".format(r.get("tokens_out", 0) or 0), esc(stop)))
+        out.append("</table>")
+    unfinished = totals.get("unfinished") or []
+    if unfinished:
+        out.append("<p class='warn'>%s ended on stop_reason=tool_use — the loop stopped with "
+                   "the model still asking for a tool. That is an unfinished run, not a fast "
+                   "one.</p>" % esc(", ".join(unfinished)))
+
+
+def render(arch: dict, trace: dict, pod: str, trace_path: str, evidence: dict,
+           last_run: dict = None) -> str:
     out = ["<!doctype html><meta charset='utf-8'>"]
     out.append("<title>Agent readout%s</title>" % (" — " + esc(pod) if pod else ""))
     out.append("<style>%s</style><div class='page'>" % CSS)
@@ -206,18 +263,25 @@ def render(arch: dict, trace: dict, pod: str, trace_path: str, evidence: dict) -
                        % (yours, esc(t["name"]), esc(t["desc_head"]), t["desc_chars"], flag, tag))
         out.append("</table>")
         if shortest < 40:
-            out.append("<p class='sub'>⚠ a description under 40 chars — Claude picks tools "
-                       "from that string alone.</p>")
+            out.append("<p class='sub'>⚠ a description under 40 chars — the description is the "
+                       "main routing surface, and the field descriptions inside input_schema "
+                       "route too.</p>")
     if arch["local_tools"]:
         out.append("<p class='sub'>local dispatch: %s</p>"
                    % ", ".join("<span class='pill you'>%s</span>" % esc(n)
                                for n in arch["local_tools"]))
 
+    # -- all five shapes ------------------------------------------------------
+    if last_run:
+        render_all_shapes(out, last_run)
+
     # -- the loop -------------------------------------------------------------
     s = trace.get("summary", {})
     tokens = s.get("tokens", {})
-    out.append("<h2>The loop — what it just did</h2>")
-    out.append("<p class='sub'>trace: %s</p>" % esc(os.path.relpath(trace_path, HERE)))
+    out.append("<h2>The loop — one conversation, turn by turn</h2>")
+    out.append("<p class='sub'>%strace: %s</p>"
+               % ("the last shape to run · " if last_run else "",
+                  esc(os.path.relpath(trace_path, HERE))))
     out.append("<div class='strip'>")
     for value, label in [
         (s.get("turns", "?"), "API turns"),
@@ -275,6 +339,7 @@ def render(arch: dict, trace: dict, pod: str, trace_path: str, evidence: dict) -
         "banked_by": evidence.get("name"),
         "banked": evidence.get("banked") or {},
         "trace": trace.get("summary") or {},
+        "all_shapes": (last_run or {}).get("totals") or None,
     }, default=str)
     out.append("<script type=\"application/json\" id=\"evidence\">%s</script>"
                % payload.replace("</", "<\\/"))
@@ -299,7 +364,8 @@ def main() -> int:
     trace = read_trace(args.trace)
     pod = read_pod()
     evidence = read_banked()
-    page = render(arch, trace, pod, args.trace, evidence)
+    last_run = read_last_run()
+    page = render(arch, trace, pod, args.trace, evidence, last_run)
     os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
     with open(args.out, "w") as f:
         f.write(page)
@@ -320,6 +386,14 @@ def main() -> int:
           % (s.get("turns", "?"), s.get("tool_calls", "?"),
              "{:,}".format(s.get("tokens", {}).get("input", 0)),
              "{:,}".format(s.get("tokens", {}).get("output", 0))))
+    if last_run:
+        t = last_run.get("totals") or {}
+        print("  all five shapes: %s/%s returned text, %s turns, %s tool calls, %s in / %s out"
+              % (t.get("resolved", "?"), t.get("shapes", "?"), t.get("turns", "?"),
+                 t.get("tool_calls", "?"), "{:,}".format(t.get("tokens_in", 0)),
+                 "{:,}".format(t.get("tokens_out", 0))))
+    else:
+        print("  all five shapes: not on the page (run python3 run.py --all to add them)")
     banked = sorted((evidence.get("banked") or {}).keys())
     print("  embedded evidence: gates %s%s"
           % (", ".join(banked) or "none banked on this laptop",

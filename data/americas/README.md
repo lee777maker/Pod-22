@@ -21,7 +21,7 @@ The table below maps each file to the tool that serves it and the system it imit
 | `disruption_policy.json` | `check_policy` | The machine-readable table built from Handbook v14 | v14.3, includes the diverted-flight rows added in week 10 |
 | `fare_rules_excerpt.md` | prompt context (cached prefix) and the `policy_adherence` judge | Handbook v14 sections 4 to 7 | About 800 words; generated from the JSON, the JSON wins |
 | `alternatives_cache.json` | `search_alternatives` | Altura availability search, already trimmed | 7 O&D keys covering the fixture disruptions; fallback rule for the rest |
-| `transcripts_sample.jsonl` | nobody at runtime; discovery reading, Prompt Rescue examples, eval seeds | Chat-platform export from the January storms and a normal February week | 8 human-agent transcripts, redacted style |
+| `transcripts_sample.jsonl` | nobody at runtime; discovery reading, tone-and-prompt examples for Build 4's intelligence lane, eval seeds | Chat-platform export from the January storms and a normal February week | 8 human-agent transcripts, redacted style |
 
 `hold_seat`, `confirm_rebooking`, `issue_voucher`, `escalate_to_human` and `send_confirmation` keep state in memory inside the snippet; they validate against these files (option ids, voucher tiers, queues) but do not write to them.
 

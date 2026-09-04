@@ -212,7 +212,7 @@ def call_agent(fn: Callable, *args, **kwargs):
 # ---------------------------------------------------------------------------
 def step_1(args) -> List[Check]:
     """Setup is the whole seat, not just this laptop: laptop, pod wiring, and
-    the forward checks days 1 and 2 both need. A pod that finds out at 16:55
+    the forward checks both sessions need. A pod that finds out at 16:55
     that one member cannot push loses the end of the day, not five minutes."""
     try:
         import ready  # lazy, so an older clone without ready.py still gates
@@ -250,9 +250,11 @@ def step_2(args) -> List[Check]:
         desc = t.get("description", "")
         checks.append(Check(
             len(desc) >= 40,
-            "%s: description routes on its own (%d chars, floor is 40)" % (t["name"], len(desc)),
-            hint="Claude picks tools from this string alone. Say when to call it, what it "
-                 "needs, and what comes back.",
+            "%s: description is substantive (%d chars, floor is 40) — routing is proven "
+            "at gate 7" % (t["name"], len(desc)),
+            hint="The description is the main routing surface, and the field descriptions "
+                 "inside input_schema route too. Say when to call it, what it needs, and "
+                 "what comes back.",
         ))
     return checks
 
@@ -267,6 +269,7 @@ def step_3(args) -> List[Check]:
     names = tracer.tool_names
     lookup_idx = names.index("lookup_booking") if "lookup_booking" in names else None
     policy_idx = names.index("check_policy") if "check_policy" in names else None
+    last_stop = tracer.turns[-1].get("stop_reason") if tracer.turns else None
 
     return [
         Check(len(tracer.turns) >= 2, "%d API turns (need >= 2)" % len(tracer.turns),
@@ -285,6 +288,11 @@ def step_3(args) -> List[Check]:
               hint="MAX_TOOL_CALLS counts API TURNS, not tool calls — one turn can carry "
                    "several calls. Count the turns you take, not the tools you execute, or "
                    "you will cut the loop off early and not know why."),
+        Check(last_stop != "tool_use",
+              "the loop ran out of tool calls, not out of turns (last stop_reason=%s)"
+              % last_stop,
+              hint="the trace ends with Claude still asking — nobody answered the last "
+                   "tool call, or the cap cut it off without a handoff."),
         Check(bool(result), "returned a non-empty string",
               hint="Run with --trace. If the last turn is stop_reason=tool_use, nobody "
                    "answered Claude's last tool call."),
@@ -328,7 +336,7 @@ def step_4(args) -> List[Check]:
                               "python3 run.py --all --trace."))
     checks.append(Check(True,
                         "(R8KD3F, the abusive-message ticket, comes back calm and helpful with "
-                        "no gate on tone at all. That is Block 13's work, not a bug to fix "
+                        "no gate on tone at all. That is Block 15's work, not a bug to fix "
                         "here — fixing it now hides the gap this run exists to show you.)"))
     return checks
 
@@ -377,7 +385,7 @@ def step_5(args) -> List[Check]:
     checks = [Check(lane is not None,
                     "PITCH.md declares a lever%s" % (" (%s)" % lane if lane else ""),
                     hint="Add a line to PITCH.md reading exactly: Lever: cost "
-                         "(or speed, or intelligence). Block 14 is where you pick it.")]
+                         "(or speed, or intelligence). Block 15 is where you pick it.")]
     # No early return on a missing lever. The bench pair either exists or it
     # does not, and a pod that measured well and forgot the line should see that
     # on the same board as the line they forgot.
@@ -525,11 +533,16 @@ def step_6(args) -> List[Check]:
                              "evals/GRADER-BUG.md, which is that exact failure from Larkspur's "
                              "own week 8."))
 
+    # Informational, never blocking. The panel reads .workshop/bench-after.json,
+    # which Build 4 produces — and Build 4 comes after this gate. A pod that has
+    # not benched yet is on schedule, not behind.
     bench_after = _bench("after")
-    checks.append(Check(bench_after is not None,
-                        "the evidence panel has numbers to show",
-                        hint="The panel reads .workshop/bench-after.json. That is Block "
-                             "13's output, so this should already exist."))
+    if bench_after is None:
+        checks.append(Check(True,
+                            "(no bench pair yet — the evidence panel will show bench numbers "
+                            "once Build 4 runs. Nothing required here.)"))
+    else:
+        checks.append(Check(True, "the evidence panel has numbers to show"))
 
     pitch = os.path.join(HERE, "PITCH.md")
     claim = ""
@@ -586,17 +599,22 @@ def step_7(args) -> List[Check]:
     # answer, in build2_probe.txt at the repo root (three lines: PNR, last name,
     # message). It lives at the root, not in .workshop/, because it is a pod
     # artifact — one person writes the question and everybody's gate runs it.
-    # Writing that question IS the spec. Without one, the default probes the
-    # scaffolded tool: a date-bounded search no given tool can run, because
-    # search_alternatives takes no date and the cache rolls forward on its own
-    # schedule.
+    # Writing that question IS the spec.
+    #
+    # Without one, the default probes the scaffolded tool: J5NU8S is two
+    # passengers stranded at DEN on a cancelled DEN-BOI, and "what is the
+    # soonest day" is a question about DATES that search_alternatives cannot be
+    # pointed at — it takes a pnr and nothing else. The fixtures answer it
+    # truthfully (the earliest open seat is 9 May 2025), which matters: a
+    # default probe whose honest answer is "nothing in the horizon" would pass
+    # this gate on a hallucinated date.
     probe_path = os.path.join(HERE, "build2_probe.txt")
     legacy_path = os.path.join(HERE, ".workshop", "build2_probe.txt")
     source = probe_path if os.path.exists(probe_path) else (
         legacy_path if os.path.exists(legacy_path) else None)
-    pnr, last = "S4BF8M", "Kowalczyk"
-    msg = ("My flight was cancelled and I cannot travel this week at all. "
-           "What is the first day after May 12 you could actually get me out?")
+    pnr, last = "J5NU8S", "Calloway"
+    msg = ("Our Boise flight was cancelled and we are stuck at Denver overnight. "
+           "What is the soonest day you could actually get us out?")
     if source:
         with open(source) as fh:
             lines = [l.strip() for l in fh if l.strip()]
@@ -624,10 +642,12 @@ def step_7(args) -> List[Check]:
                                                used, attempts),
                         hint="Three attempts, none of them reached for your tool — that is a "
                              "routing result, not bad luck. Two suspects, in order: the "
-                             "description (Claude picks tools from that string alone), then the "
-                             "probe. Write the one customer message your tool exists to answer "
-                             "into build2_probe.txt at the repo root (three lines: PNR, last "
-                             "name, message)."))
+                             "description, including the field descriptions inside "
+                             "input_schema (an over-constrained argument description is a "
+                             "routing failure that looks like judgement), then the probe. "
+                             "Write the one customer message your tool exists to answer into "
+                             "build2_probe.txt at the repo root (three lines: PNR, last name, "
+                             "message)."))
     checks.append(Check(bool(result), "returned a non-empty string"))
     summary = tracer.summary() if tracer else {}
     checks.append(Check(True, "(that probe cost %s tokens in across %d tool call(s) — the "

@@ -1,9 +1,10 @@
 """Larkspur agent constants — GIVEN, do not edit.
 
-This is a v1 prompt: reasonably competent, not yet hardened. Prompt Rescue
-(the case study's Beat 3) is where a prompt like this one gets diagnosed and
-fixed against real failures. Don't fix it here — that's a later session's
-lesson, and this step's gate doesn't grade prompt quality at all.
+This is a v1 prompt: reasonably competent, not yet hardened. The tone gap it
+leaves open closes in Build 4's intelligence lane, where a prompt like this one
+gets diagnosed and fixed against measured failures. Don't fix it here — this
+step's gate doesn't grade prompt quality at all, and closing the gap early
+hides the thing Build 1's Stage 1 run exists to show you.
 """
 
 MODEL = "claude-sonnet-5"
@@ -119,13 +120,6 @@ DEFAULT_LAST_NAME = STAGE1_TASKS[0]["last_name"]
 
 def runtime_preamble() -> str:
     """A line the agent genuinely wants — and the reason caching will report a 0%
-    hit rate until somebody notices it.
-
-    FACILITATOR: this is a deliberate plant, not an oversight. Larkspur hit the
-    same thing in shadow: a `Current time:` line at the top of an otherwise
-    static system block invalidated the cached prefix on every single call, and
-    it read as "caching does not work here" for two weeks. Do not remove it and
-    do not name it in Teach 3. The cost lane is supposed to find it.
-    """
+    hit rate until somebody notices it."""
     from datetime import datetime
     return "Current time: %s\n\n" % datetime.now().strftime("%Y-%m-%d %H:%M:%S")

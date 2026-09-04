@@ -28,6 +28,7 @@ import argparse
 import glob
 import json
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -42,8 +43,13 @@ MINE_DIR = os.path.join(HERE, ".workshop", "mine")
 # What a canon push publishes. Anything not on this list stays local, on
 # purpose: .env is yours, .workshop/ is your own progress, and .venv/ is a
 # machine detail nobody else can use.
+#
+# readout.html and readout-trace.json are in .gitignore so nobody hand-commits
+# a stale readout. This list is the exception, and cmd_push_canon force-adds
+# them: the readout is published by the block's committer, regenerated, or not
+# at all.
 CANON_FILES = ["agent.py", "readout.html", "readout-trace.json", "PITCH.md",
-               "CHANGES.md", "build2_probe.txt"]
+               "spec/", "build2_probe.txt"]
 
 GATE_NAMES = {1: "Setup", 2: "Tool schemas", 3: "The agentic loop",
               4: "Prove it generalizes", 5: "Pull your lever",
@@ -275,19 +281,30 @@ def cmd_status(args):
 # --push-canon
 # ---------------------------------------------------------------------------
 
-def resolve_gate(args, profile, ref):
-    """Which block are we syncing? The flag wins, then the newest canon on the
-    remote, then the highest gate banked here."""
+def resolve_gate(args, profile, ref, prefer="remote"):
+    """Which block are we syncing?
+
+    The flag always wins. After that the two verbs want different answers, and
+    getting this backwards is how a committer gets refused for a gate they
+    never claimed to be pushing:
+
+      --push-canon  is publishing what passed HERE, so the highest gate banked
+                    on this laptop is the right guess (prefer="local").
+      --take-canon  is picking up what the pod published, so the newest canon
+                    on the remote is (prefer="remote").
+    """
     if args.gate:
         return args.gate, "you named it with --gate"
-    canon = canon_commits(ref)
-    for row in canon:
-        gate = gate_of(row["subject"])
-        if gate:
-            return gate, "the newest canon on the remote is gate %d" % gate
     steps = banked_steps(profile)
-    if steps:
-        return steps[-1], "the highest gate banked on this laptop"
+    remote_gate = next((g for g in (gate_of(r["subject"]) for r in canon_commits(ref)) if g),
+                       None)
+    local = (steps[-1], "the highest gate banked on this laptop") if steps else None
+    remote = ((remote_gate, "the newest canon on the remote is gate %d" % remote_gate)
+              if remote_gate else None)
+    order = (local, remote) if prefer == "local" else (remote, local)
+    for answer in order:
+        if answer:
+            return answer
     return None, "nothing banked here and no canon on the remote"
 
 
@@ -329,7 +346,7 @@ def cmd_push_canon(args):
     fetch()
     ref = upstream_ref()
     profile = load_profile()
-    gate, why = resolve_gate(args, profile, ref)
+    gate, why = resolve_gate(args, profile, ref, prefer="local")
     banked = banked_steps(profile)
 
     if gate is None:
@@ -364,7 +381,10 @@ def cmd_push_canon(args):
                     "Are you in the exercise folder? `pwd` should end in /exercise.")
     staged = []
     for path in present:
-        code, out = git("add", "--", path)
+        # -f: readout.html and readout-trace.json are gitignored so that nobody
+        # hand-commits a stale readout. This command is the one place they are
+        # meant to be published, and it has just regenerated them.
+        code, out = git("add", "-f", "--", path)
         if code == 0:
             staged.append(path)
         elif path == "agent.py":
@@ -445,6 +465,54 @@ def save_my_agent(gate):
     return path
 
 
+def colliding_untracked(ref):
+    """Files the incoming canon tracks that exist here but are NOT tracked here.
+
+    These are exactly the ones a pull refuses to overwrite, and the usual pair
+    is readout.html / readout-trace.json: gitignored locally, published by the
+    committer, so the first --take-canon after a canon push meets two untracked
+    files sitting where two incoming tracked files want to go. Nothing here is
+    a merge problem; they just have to move.
+    """
+    incoming = [p.strip() for p in git_out("ls-tree", "-r", "--name-only", ref).splitlines()
+                if p.strip()]
+    tracked = set(p.strip() for p in git_out("ls-files").splitlines() if p.strip())
+    return [p for p in incoming
+            if p not in tracked and os.path.exists(os.path.join(HERE, p))]
+
+
+def move_aside(paths):
+    """Same drawer as save_my_agent, same promise: nothing here deletes a file.
+    Returns [(path, where it went)]."""
+    moved = []
+    if not paths:
+        return moved
+    os.makedirs(MINE_DIR, exist_ok=True)
+    stamp = time.strftime("%Y%m%d-%H%M%S")
+    for rel in paths:
+        flat = rel.replace("\\", "-").replace("/", "-")
+        dest = os.path.join(MINE_DIR, "%s-%s" % (stamp, flat))
+        n = 2
+        while os.path.exists(dest):
+            dest = os.path.join(MINE_DIR, "%s-%s-%d" % (stamp, flat, n))
+            n += 1
+        try:
+            shutil.move(os.path.join(HERE, rel), dest)
+        except OSError:
+            continue
+        moved.append((rel, os.path.relpath(dest, HERE)))
+    return moved
+
+
+def clear_collisions(ref):
+    """Move-aside pass with the one line of narration it deserves."""
+    moved = move_aside(colliding_untracked(ref))
+    for rel, dest in moved:
+        print("  %s was here but never committed, and the canon carries it — moved to %s"
+              % (rel, dest))
+    return moved
+
+
 def restore_deleted():
     """After a mixed reset, files the canon added but this laptop never had
     read as deletions. They are not: nobody deleted anything."""
@@ -474,19 +542,22 @@ def cmd_take_canon(args):
     else:
         print("  no agent.py here to save (nothing of yours can be lost)")
 
+    # Advisory, never a refusal. A pod at the end of a block needs everyone on
+    # the canon more than it needs one person's gate, and refusing here strands
+    # whoever ran out of time on a file the next block does not start from.
     if gate is not None and gate not in banked and not args.force:
-        return fail("Gate %d has not passed on this laptop, so taking the canon now would "
-                    "skip your own build." % gate,
-                    "Banked here: %s" % (", ".join(str(s) for s in banked) or "nothing"),
-                    "The block is where the learning is, and the canon is the answer.",
-                    "Finish yours first:",
-                    "  python3 verify.py %d" % gate,
-                    "Out of time, or picking up after a break? Then take it on purpose:",
-                    "  python3 pod_sync.py --take-canon --force",
-                    "(Your version is already saved at %s)"
-                    % (os.path.relpath(saved, HERE) if saved else "nowhere: there was none"))
+        print("\n  Heads up: the canon carries gate %d, which you have not banked "
+              "(banked here: %s)." % (gate, ", ".join(str(s) for s in banked) or "nothing"))
+        print("  Taking it anyway. Your file is saved at %s, and the block you missed is"
+              % (os.path.relpath(saved, HERE) if saved else "nowhere: there was none"))
+        print("  still worth finishing on your own copy: python3 verify.py %d" % gate)
     if gate is None:
         print("  which block this is could not be worked out (%s), so no gate check" % why)
+
+    # Before anything moves: untracked files the canon tracks. Otherwise the
+    # pull below refuses over readout.html and the only advice left is a
+    # re-clone, which costs the pod ten minutes it does not have.
+    clear_collisions(ref)
 
     ahead, behind = ahead_behind(ref)
     if ahead:
@@ -510,6 +581,15 @@ def cmd_take_canon(args):
                             timeout=60)
             if code != 0:
                 git("rebase", "--abort")
+                # One more pass: a pull that fails names what is in the way, and
+                # a file that appeared since the first sweep is still just a
+                # file that has to move, not a reason to re-clone.
+                if clear_collisions(ref):
+                    code, out = git("pull", "--rebase", "--autostash", "origin",
+                                    branch_name(), timeout=60)
+                    if code != 0:
+                        git("rebase", "--abort")
+            if code != 0:
                 return fail("Could not fast-forward onto the pod's canon.", last_line(out),
                             "Your agent.py is saved at %s."
                             % (os.path.relpath(saved, HERE) if saved else "(none)"),
@@ -557,7 +637,8 @@ def main():
     parser.add_argument("--gate", type=int, default=None,
                         help="which verify.py gate this block is (default: worked out for you)")
     parser.add_argument("--force", action="store_true",
-                        help="with --take-canon: take it even though your own gate has not passed")
+                        help="with --take-canon: you already know your gate has not passed "
+                             "— skip the heads-up (taking it is no longer refused)")
     args = parser.parse_args()
 
     verbs = [args.status, args.push_canon, args.take_canon]

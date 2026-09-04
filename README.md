@@ -59,7 +59,7 @@ Block 2 turns a set of laptops into a pod. Ten minutes, four steps.
    python3 ready.py --name "Your Name" --stamp
    ```
    `ready.py` is the Block 2 command. It runs the laptop checks, the pod checks
-   and the forward checks for both days in one board, prints your two site
+   and the forward checks for both sessions in one board, prints your two site
    codes, and `--stamp` pushes your `ready/<you>.md` receipt to the repo.
 
 Two codes come out of this, and they are different on purpose:
@@ -94,10 +94,16 @@ Three things follow from it:
 - **`python3 pod_sync.py --status`** answers "where is the pod, where am I"
   without anyone reading git output: what the canon is, who pushed it, how many
   handshakes and receipts landed, and what you have banked.
+- **Your spec is yours too.** Before the first build,
+  `cp spec/example.md spec/your-name.md`, and commit it the way you committed
+  your `team/` file. `/coach` asks what YOUR spec says for a step before it
+  writes any code — one file per person, same as the roster. See
+  `spec/README.md`.
 
-Everything else is a normal commit. `TEAM.md`, `team/`, `ready/`, `CHANGES.md`,
+Everything else is a normal commit. `TEAM.md`, `team/`, `ready/`, `spec/`,
 `PITCH.md` and `evals/cases.json` are the pod's shared record, and they do not
-thrash the way `agent.py` does.
+thrash the way `agent.py` does. `team/`, `ready/` and `spec/` are one file per
+person, so five people can push at once and never collide.
 
 ---
 
@@ -106,9 +112,14 @@ thrash the way `agent.py` does.
 | Build | Block | Gate | What the canon push carries | Who pushes |
 |---|---|---|---|---|
 | 1 — tool schemas, the loop, prove it generalizes | 5 | `verify.py 2`, `3`, then `4` | `agent.py`, `readout.html` | one person, once the pod agrees whose passed |
-| 2 — the tools you decided you need | 7 | `verify.py 7` | `agent.py`, `.workshop/build2_probe.txt`, `readout.html` | the pod's committer for that block |
-| 3 — pull your lever, measure it | 13 | `verify.py 5` | `agent.py`, `CHANGES.md`, `readout.html` | the pod's committer for that block |
-| 4 — build what the client sees | 15 | `verify.py 6` | `agent.py`, `PITCH.md`, `readout.html` | the pod's committer for that block |
+| 2 — the tools you decided you need | 7 | `verify.py 7` | `agent.py`, `build2_probe.txt`, `readout.html` | the pod's committer for that block |
+| 3 — build what the client sees: eval cases and the pitch | 13 | `verify.py 6` | `agent.py`, `PITCH.md`, `readout.html` | the pod's committer for that block |
+| 4 — pull your lever, measure it | 15 | `verify.py 5` | `agent.py`, `PITCH.md`, `readout.html` | the pod's committer for that block |
+
+`evals/cases.json` is a normal commit, not a canon file — it is the pod's
+shared record and it does not thrash the way `agent.py` does. The bench pair
+Build 4 produces never leaves your laptop: `.workshop/` is gitignored, and
+`bench-before.json` is a measurement of an agent that no longer exists.
 
 Each build ends the same way:
 
@@ -141,7 +152,7 @@ python3 pod_sync.py --take-canon --force
 ```
 
 Know what it does and does not bring back. It restores the committed files:
-`agent.py`, the readout, `PITCH.md`, `CHANGES.md`, the roster and the receipts.
+`agent.py`, the readout, `PITCH.md`, the specs, the roster and the receipts.
 It does not restore anything gitignored, and that list matters:
 
 - **`.env`** — your key. Yours, never in the repo. Re-create it from

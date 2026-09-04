@@ -1,9 +1,15 @@
 # Larkspur disruption agent — spec
 
-This file is the actual exercise. Fill in each blank *before* you touch
-`agent.py` for that step — in your own words, not Claude's. `/coach` will ask
-what this says before it helps you write code, and if a section is empty,
-that's the problem to fix first.
+Copy this to `spec/<your-name>.md` and fill it in there. This file is the
+template; leave it as it is so the next person has one.
+
+```bash
+cp spec/example.md spec/your-name.md
+```
+
+Fill in each blank *before* you touch `agent.py` for that step — in your own
+words, not Claude's. `/coach` will ask what your file says before it helps you
+write code, and if a section is empty, that's the problem to fix first.
 
 ## Step 2 — Tool schemas
 

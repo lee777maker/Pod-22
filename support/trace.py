@@ -3,7 +3,8 @@
 This file is GIVEN, and it is the point of the whole exercise. A slide shows
 you a printed answer. This shows you the *request/response cycle*: how many
 turns the loop took, which parameters were on each call, which content blocks
-came back, and what it cost.
+came back, which tools it asked for, what those tools answered, and what it
+cost.
 
 Usage:
     from support.trace import Tracer, wrap
@@ -21,6 +22,11 @@ import time
 from typing import Any, Dict, List, Optional
 
 RULE = "─" * 74
+
+# A tool RESULT is evidence, not a transcript. Long enough that a reader (or an
+# eval judge) can see what actually came back, short enough that a 4k-token
+# policy row does not swamp the page it is quoted on.
+RESULT_CHARS = 500
 
 
 def _short(value: Any, limit: int = 88) -> str:
@@ -86,8 +92,26 @@ class Tracer:
             if btype == "tool_use":
                 turn["tool_calls"].append({
                     "name": getattr(block, "name", "?"),
+                    "id": getattr(block, "id", None),
                     "input": getattr(block, "input", {}),
+                    # Filled in later by record_result(), once the tool has
+                    # actually run. The ask and the answer are different facts:
+                    # a trace that records only the ask cannot tell you whether
+                    # the agent was reading a real policy row or an error dict.
+                    "result": None,
                 })
+
+    def record_result(self, name: str, output: Any) -> bool:
+        """Attach a compact result summary to the earliest call of `name` that
+        has not been answered yet. Execution order matches block order, so the
+        earliest-unanswered rule is correct even when one turn calls the same
+        tool twice."""
+        for turn in self.turns:
+            for call in turn["tool_calls"]:
+                if call.get("name") == name and call.get("result") is None:
+                    call["result"] = _short(output, RESULT_CHARS)
+                    return True
+        return False
 
     # -- reading -----------------------------------------------------------
     @property
@@ -266,4 +290,32 @@ class TracedClient:
 
 def wrap(client: Any, tracer: Tracer) -> TracedClient:
     """Wrap an Anthropic client so every call lands in `tracer`."""
+    global _ACTIVE
+    _ACTIVE = tracer
     return TracedClient(client, tracer)
+
+
+# ---------------------------------------------------------------------------
+# Tool results
+#
+# The tracer sees the request/response cycle, which is where a tool CALL shows
+# up. What the tool ANSWERED happens outside that cycle — in support/tools.py
+# for the given nine, in agent.py's LOCAL_TOOLS for the ones you add — so it
+# has to be handed back in. wrap() marks the current conversation's tracer as
+# the one to hand it to, and one conversation runs at a time.
+# ---------------------------------------------------------------------------
+
+_ACTIVE: Optional[Tracer] = None
+
+
+def record_tool_result(name: str, output: Any) -> bool:
+    """Attach what a tool returned to the call that asked for it. Never raises:
+    a missing tracer means somebody ran a tool outside a traced conversation,
+    which is not an error, it just has nowhere to be recorded."""
+    tracer = _ACTIVE
+    if tracer is None:
+        return False
+    try:
+        return tracer.record_result(name, output)
+    except Exception:  # noqa: BLE001 - recording evidence must never break a run
+        return False

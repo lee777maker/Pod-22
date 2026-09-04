@@ -71,7 +71,13 @@ def load_agent():
 
 
 def run_one(agent, task) -> dict:
-    """One conversation. Never raises: a shape that blows up is a data point."""
+    """One conversation. Never raises: a shape that blows up is a data point.
+
+    `resolved` below means the agent returned text without raising. It does NOT
+    mean the answer was right, and nothing in this file can tell you that —
+    `rules_pass` is the closest thing, and it only reads the wire. Say
+    "resolved" out loud in a pitch and somebody will hear "handled correctly".
+    """
     from support import DEFAULT_MESSAGE
     t0 = time.time()
     try:
@@ -197,7 +203,8 @@ def render(agg, label) -> str:
     L = ["", "─" * 68, "BENCH  %s   stage %s   %d runs x %d shapes"
          % (label, agg["stage"], agg["runs_per_shape"], agg["n"] // (agg["runs_per_shape"] or 1)),
          "─" * 68,
-         "  resolved            %d/%d  (%.0f%%)" % (agg["resolved"], agg["n"], agg["resolved_pct"]),
+         "  resolved            %d/%d  (%.0f%%)   returned text and the loop closed — not "
+         "\"handled correctly\"" % (agg["resolved"], agg["n"], agg["resolved_pct"]),
          "  latency             p50 %.2fs   p95 %.2fs   mean %.2fs"
          % (agg["p50_s"], agg["p95_s"], agg["mean_s"]),
          "  turns / tool calls  %.2f / %.2f  mean" % (agg["turns_mean"], agg["tool_calls_mean"]),

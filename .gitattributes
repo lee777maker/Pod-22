@@ -1,5 +1,9 @@
-# Two files that many people append to at once. `merge=union` keeps every
-# line from both sides instead of raising a conflict nobody in a breakout
-# should have to resolve.
+# TEAM.md is the one file several people append to at once (the pod's name and
+# size, then a roster line each). `merge=union` keeps every line from both
+# sides instead of raising a conflict nobody in a breakout should have to
+# resolve.
+#
+# ready/ and team/ and spec/ deliberately get NO union rule: one file per
+# person means two people never write the same file, so there is nothing to
+# union and a conflict there would be a real one worth stopping for.
 TEAM.md merge=union
-READY.md merge=union

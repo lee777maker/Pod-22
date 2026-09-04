@@ -30,7 +30,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
 RULE = "─" * 66
-REQUIRED_FILES = ["agent.py", "run.py", "verify.py", "SPEC.md", "CLAUDE.md",
+REQUIRED_FILES = ["agent.py", "run.py", "verify.py", "spec/example.md", "CLAUDE.md",
                   "ready.py", "pod_doctor.py", "pod_sync.py", "TEAM.md", "PITCH.md",
                   "support/data.py", "support/tools.py", "support/trace.py",
                   "support/client.py", "support/mock_backend.py",
@@ -225,7 +225,7 @@ def check_credential() -> Item:
     if mode == "offline":
         return Item(False, "credential: OFFLINE MODE (%s)" % detail,
                     "LARKSPUR_OFFLINE=1 is set, and there is no offline path in this pack.\n"
-                    "     Every block in both days calls the real API, so this setting only\n"
+                    "     Every block in both sessions calls the real API, so this setting only\n"
                     "     hides the problem until the room is watching. Unset it:\n"
                     "       unset LARKSPUR_OFFLINE            (and take it out of .env)\n"
                     "     Then get a working credential: an `ant auth login` session or an\n"
@@ -268,7 +268,7 @@ def check_live_call() -> Item:
             "            ant auth login\n"
             "            ant auth status        # confirms which credential is active\n"
             "       2. Have an API key? cp .env.example .env and paste it in\n"
-            "       3. Neither? Ask for one now. Both days call the API in every block."
+            "       3. Neither? Ask for one now. Both sessions call the API in every block."
         )
         if "resolve authentication" in str(exc).lower() or name == "AuthenticationError":
             hint = no_credential
@@ -331,7 +331,7 @@ def main() -> int:
     if args.offline:
         print("\n%s" % RULE)
         print("There is no offline mode in this pack, so --offline does nothing but hide")
-        print("the problem. Every block in both days makes a real API call.")
+        print("the problem. Every block in both sessions makes a real API call.")
         print("What to do instead:")
         print("  1. python3 doctor.py            and fix the credential check it names")
         print("  2. no key at all? ask for one now, before the day")

@@ -7,8 +7,8 @@ the description that drives selection — is your job, in agent.py's
 build_tools(). What each tool actually *does* lives here, and doesn't change
 no matter how you describe it.
 
-Two guardrails worth knowing before you build on top of these — they are the
-Protocols session's whole lesson, made structural instead of narrated:
+Two guardrails worth knowing before you build on top of these. Both are the
+same idea, made structural instead of written down in a prompt and hoped for:
 
   - check_policy and search_alternatives do NOT take fare_family, loyalty_tier
     or "is this overnight" as arguments — they re-derive those from the
@@ -23,6 +23,7 @@ Protocols session's whole lesson, made structural instead of narrated:
 from __future__ import annotations
 
 from . import mock_backend as backend
+from .trace import record_tool_result
 
 SSR_INVENTORY_CODES = {"PETC", "MEDA", "OXYG", "STCR", "ESAN"}
 
@@ -165,5 +166,7 @@ def execute_tool(name, tool_input):
         entry["result"] = {"error": f"Bad arguments for {name}: {exc}"}
     # The result is logged, not just the call. An audit trail that records the
     # ask and not the answer cannot tell you what a hold actually returned,
-    # which is what demo/serve.py needs to offer a real Confirm button.
+    # which is what demo/serve.py needs to offer a real Confirm button — and
+    # what an eval judge needs before it can say the agent read the row right.
+    record_tool_result(name, entry["result"])
     return entry["result"]

@@ -1,7 +1,7 @@
 {
   "_readme": [
     "GIVEN EXAMPLES. Copy this to cases.json and make them yours.",
-    "Three cases is the Block 15 target, and at least two must be hard gates.",
+    "Three cases is the Block 13 target, and at least two must be hard gates.",
     "A hard_gate failure blocks the release regardless of the pass rate.",
     "Case ids follow Larkspur's own convention: suite prefix, then a number.",
     "Graders run in order and ALL must pass. Put the cheap deterministic ones first.",

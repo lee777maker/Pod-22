@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""ready.py — one command that proves you're set up for the WHOLE two days.
+"""ready.py — one command that proves you're set up for both sessions.
 
     python3 ready.py --name "Your Name"          # the full readiness board
     python3 ready.py --json                      # machine-readable, for Claude Code
@@ -15,7 +15,7 @@ Claude Code will run this script, fix what it can, and re-run until it's green.
 Four sections, in dependency order:
   LAPTOP   — doctor.py's checks: python, venv, SDK, network, credential, live call
   POD      — pod_doctor.py's checks: shared repo, remote, roster, one commit each
-  SESSION  — everything the NEXT TWO DAYS need, checked now while there's time to
+  SESSION  — everything BOTH SESSIONS need, checked now while there's time to
              fix it: .env can't leak, every harness script compiles, fixtures
              load, git identity is set, you can actually push, Claude Code is here
   SITE     — the two codes the workshop site asks for, printed when earned
@@ -78,7 +78,7 @@ class C:
 
 
 # ---------------------------------------------------------------------------
-# SESSION — forward checks: what days 1 AND 2 will need
+# SESSION — forward checks: what BOTH sessions will need
 # ---------------------------------------------------------------------------
 
 def check_env_ignored():
@@ -166,7 +166,7 @@ def check_can_push():
     code, out = _git("push", "--dry-run", "origin", "HEAD", timeout=30)
     if code != 0:
         return C("session.push", False, "can push to origin (dry run)",
-                 "%s\n     Days 1 and 2 both end with a push. Fix GitHub access NOW, not at "
+                 "%s\n     Both sessions end with a push. Fix GitHub access NOW, not at "
                  "16:55.\n     Private pod repo? The creator has to add you as a collaborator.\n"
                  "     https auth → `gh auth login`; SSH → check `ssh -T git@github.com`."
                  % (out.splitlines()[-1] if out else "no response"))
@@ -331,7 +331,7 @@ def main():
         }, indent=2))
         return 0 if ready else 1
 
-    print("\n%s\nLARKSPUR READY  ·  the whole two days, checked now\n%s" % (RULE, RULE))
+    print("\n%s\nLARKSPUR READY  ·  both sessions, checked now\n%s" % (RULE, RULE))
     section = None
     for s, c in checks:
         if s != section:
@@ -350,7 +350,7 @@ def main():
         print(RULE)
         return 1
 
-    print("READY — every check for both days is green on this laptop.")
+    print("READY — every check for both sessions is green on this laptop.")
     if args.name:
         banked = bank_step_1(args.name)
         if banked:

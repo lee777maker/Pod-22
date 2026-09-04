@@ -7,7 +7,7 @@ Two panes. On the left, the chat a customer would see. On the right, the evidenc
 a sponsor would ask for: your bench numbers, your eval gates, your guardrail.
 
 Why this is given rather than built: a terminal is not a demo, and writing a web
-app is not what this half-day is about. You have 45 minutes in Block 15 and the
+app is not what this half-day is about. You have 10 minutes of Block 13 and the
 evidence is the work. Making the surface yours is the stretch, not the task.
 
 It calls YOUR run_agent(pnr, last_name, message). Nothing here knows or cares how

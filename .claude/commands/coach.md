@@ -1,8 +1,11 @@
 Coach the person through whichever step they're currently on. Follow CLAUDE.md's contract.
 
 1. Figure out which step they're on: run `python3 verify.py` (no args) and read the status board.
-2. Ask what `SPEC.md` says for that step. If it's empty, help them write it first — in their own
-   words, by asking them the question the spec asks. Do not write the spec for them.
+2. Ask what THEIR spec says for that step — `spec/<their-name>.md`, one file per person, copied
+   from `spec/example.md`. If they have not made one yet, that is step zero: `cp spec/example.md
+   spec/their-name.md`. If the section is empty, help them write it first — in their own words, by
+   asking them the question the spec asks. Do not write the spec for them, and do not read a
+   podmate's spec file to them.
 3. Look at the `✏️ YOUR TURN` marker for that step in `agent.py`. Do not read ahead to later steps.
 4. Give them the smallest nudge that unblocks them, in this order of preference:
    - point at the line on the wire trace (`python3 run.py <PNR> --trace`) that disagrees with
