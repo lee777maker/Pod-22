@@ -1,0 +1,16 @@
+# Never let a key reach the repo.
+.env
+.env.*
+!.env.example
+
+.venv/
+venv/
+
+# Local progress: banked codes, traces, bench numbers. Yours, not the pod's.
+# (The Build 2 probe lives at the repo root as build2_probe.txt, so it travels
+# with the canon push without an exception here.)
+.workshop/
+
+__pycache__/
+*.pyc
+.DS_Store

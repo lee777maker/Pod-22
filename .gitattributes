@@ -1,0 +1,5 @@
+# Two files that many people append to at once. `merge=union` keeps every
+# line from both sides instead of raising a conflict nobody in a breakout
+# should have to resolve.
+TEAM.md merge=union
+READY.md merge=union

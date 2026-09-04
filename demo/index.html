@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Larkspur · disruption care</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#faf9f5; --ink:#141413; --rust:#d97757; --sand:#e8e4d9;
+    --ink-55:rgba(20,20,19,.55); --ink-30:rgba(20,20,19,.30);
+    --go:#5c7a52; --stop:#a94f3d; --kraft:#c98f4b;
+    --sans:'DM Sans',system-ui,sans-serif; --serif:'Source Serif 4',Georgia,serif;
+    --mono:'JetBrains Mono',ui-monospace,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--cream);color:var(--ink);font:400 15px/1.55 var(--sans);
+       height:100vh;overflow:hidden}
+  .shell{display:grid;grid-template-columns:1fr 420px;height:100vh}
+  @media (max-width:900px){.shell{grid-template-columns:1fr;overflow:auto;height:auto}}
+
+  /* ── chat ─────────────────────────────────────────────── */
+  .chat{display:flex;flex-direction:column;height:100vh;border-right:1.5px solid var(--sand)}
+  .bar{padding:16px 22px;border-bottom:1.5px solid var(--sand);display:flex;
+       align-items:center;gap:12px;flex-shrink:0}
+  .mark{width:26px;height:26px;flex-shrink:0}
+  .bar h1{font:600 17px/1 var(--serif);letter-spacing:-.01em}
+  .bar .sub{font-size:12px;color:var(--ink-55);margin-left:auto}
+  .stream{flex:1;overflow-y:auto;padding:22px;display:flex;flex-direction:column;gap:16px}
+  .msg{max-width:min(78%,620px);padding:13px 16px;border-radius:14px;font-size:15px;
+       white-space:pre-wrap;word-wrap:break-word}
+  .msg.me{align-self:flex-end;background:var(--ink);color:var(--cream);border-bottom-right-radius:4px}
+  .msg.them{align-self:flex-start;background:#fff;border:1.5px solid var(--sand);
+            border-bottom-left-radius:4px}
+  .msg.err{align-self:stretch;max-width:100%;background:#fdf2ef;border:1.5px solid var(--stop);
+           font:400 12px/1.5 var(--mono);color:var(--stop);white-space:pre-wrap;overflow-x:auto}
+  .meta{align-self:flex-start;font:400 11px/1 var(--mono);color:var(--ink-30);
+        letter-spacing:.02em;margin-top:-8px}
+  .empty{margin:auto;text-align:center;color:var(--ink-30);max-width:320px}
+  .empty svg{width:34px;height:34px;margin-bottom:12px}
+
+  .compose{border-top:1.5px solid var(--sand);padding:14px 22px 18px;flex-shrink:0;background:var(--cream)}
+  .who{display:flex;gap:8px;margin-bottom:9px}
+  .who input{flex:0 0 118px;font:400 12px/1 var(--mono)}
+  .who select{flex:1;font:400 12px/1 var(--sans)}
+  input,select,textarea,button{font-family:inherit}
+  input,select{padding:8px 10px;border:1.5px solid var(--sand);border-radius:8px;
+               background:#fff;color:var(--ink);font-size:13px}
+  .row{display:flex;gap:8px}
+  .row input[type=text]{flex:1;font-size:14px;padding:11px 13px}
+  button{padding:11px 18px;border:none;border-radius:8px;background:var(--ink);color:var(--cream);
+         font-weight:500;font-size:14px;cursor:pointer}
+  button:disabled{opacity:.4;cursor:default}
+  button.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--sand)}
+  .confirm-card{align-self:flex-start;max-width:min(78%,620px);background:#fff;
+       border:1.5px solid var(--kraft);border-left:4px solid var(--kraft);
+       border-radius:12px;padding:14px 16px}
+  .confirm-card h4{font:600 13px/1.3 var(--sans);margin-bottom:4px}
+  .confirm-card p{font-size:12px;color:var(--ink-55);margin-bottom:10px}
+  .confirm-card .row{gap:6px}
+  .confirm-card button{padding:8px 13px;font-size:12.5px}
+
+  /* ── evidence panel ───────────────────────────────────── */
+  .panel{height:100vh;overflow-y:auto;padding:20px;background:#fff}
+  @media (max-width:900px){.panel,.chat{height:auto}}
+  .panel h2{font:600 12px/1 var(--sans);text-transform:uppercase;letter-spacing:.12em;
+            color:var(--ink-55);margin:22px 0 10px}
+  .panel h2:first-child{margin-top:0}
+  .hero{border:1.5px solid var(--sand);border-top:3px solid var(--rust);border-radius:12px;
+        padding:16px 18px;margin-bottom:4px}
+  .hero .n{font:600 34px/1 var(--serif);letter-spacing:-.02em}
+  .hero .u{font-size:12px;color:var(--ink-55);margin-top:5px}
+  .delta{display:flex;align-items:baseline;gap:8px;padding:9px 0;
+         border-bottom:1px solid var(--sand);font-size:13px}
+  .delta:last-child{border-bottom:none}
+  .delta .nm{flex:1;color:var(--ink-55);font-size:12.5px}
+  .delta .ba{font:400 12.5px/1 var(--mono)}
+  .delta .ba s{color:var(--ink-30);text-decoration:line-through}
+  .delta .tag{font:700 10px/1 var(--sans);letter-spacing:.06em;padding:3px 6px;border-radius:4px}
+  .tag.up{background:#eef3ec;color:var(--go)} .tag.dn{background:#fbeeeb;color:var(--stop)}
+  .tag.na{background:var(--sand);color:var(--ink-55)}
+  .suite{display:flex;align-items:center;gap:8px;padding:8px 0;
+         border-bottom:1px solid var(--sand);font-size:13px}
+  .suite:last-child{border-bottom:none}
+  .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+  .dot.p{background:var(--go)} .dot.f{background:var(--stop)}
+  .suite .id{font:400 12px/1 var(--mono);flex:1}
+  .suite .hg{font:700 9px/1 var(--sans);letter-spacing:.07em;color:var(--kraft)}
+  .verdict{border-radius:10px;padding:12px 14px;font-size:13px;font-weight:500;margin-top:10px}
+  .verdict.clear{background:#eef3ec;color:var(--go);border:1.5px solid #cfe0c8}
+  .verdict.blocked{background:#fbeeeb;color:var(--stop);border:1.5px solid #f0cfc6}
+  .none{font-size:12.5px;color:var(--ink-30);padding:10px 0;font-style:italic}
+  .cmd{font:400 11.5px/1.7 var(--mono);background:var(--cream);border:1.5px solid var(--sand);
+       border-radius:8px;padding:9px 11px;color:var(--ink-55);margin-top:6px;overflow-x:auto}
+  .pitch{font:400 12.5px/1.65 var(--sans);white-space:pre-wrap;color:var(--ink-55);
+         border-left:3px solid var(--sand);padding-left:12px;max-height:210px;overflow-y:auto}
+  .gates{display:flex;gap:5px;flex-wrap:wrap}
+  .g{width:26px;height:26px;border-radius:6px;display:grid;place-items:center;
+     font:700 11px/1 var(--mono);background:var(--sand);color:var(--ink-30)}
+  .g.on{background:var(--ink);color:var(--cream)}
+  .spin{display:inline-block;width:11px;height:11px;border:2px solid var(--ink-30);
+        border-top-color:var(--ink);border-radius:50%;animation:s .7s linear infinite}
+  @keyframes s{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <section class="chat">
+    <div class="bar">
+      <svg class="mark" viewBox="0 0 32 32" aria-hidden="true">
+        <rect width="32" height="32" rx="7" fill="#141413"/>
+        <circle cx="23" cy="10" r="3.2" fill="#d97757"/>
+        <path d="M3 25 L11 13 L16 20 L20 14 L29 25 Z" fill="#faf9f5"/>
+      </svg>
+      <h1>Larkspur · disruption care</h1>
+      <span class="sub" id="whoami"></span>
+    </div>
+
+    <div class="stream" id="stream">
+      <div class="empty" id="empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.9 9.9 0 0 1-2.8-.4L3 21l1.9-5.1A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z"/>
+        </svg>
+        <p>Pick a passenger and send a message. This calls your own
+           <code>run_agent</code>.</p>
+      </div>
+    </div>
+
+    <div class="compose">
+      <div class="who">
+        <input id="pnr" value="K7PQ2M" spellcheck="false" aria-label="PNR">
+        <select id="preset" aria-label="Passenger and scenario"></select>
+      </div>
+      <div class="row">
+        <input id="msg" type="text" autocomplete="off"
+               value="My flight was disrupted — what happens next?" aria-label="Message">
+        <button id="send">Send</button>
+      </div>
+    </div>
+  </section>
+
+  <aside class="panel">
+    <h2>The number</h2>
+    <div class="hero">
+      <div class="n" id="hero-n">—</div>
+      <div class="u" id="hero-u">Run bench.py to fill this in.</div>
+    </div>
+
+    <h2>Before and after</h2>
+    <div id="deltas"><div class="none">No before/after yet.</div>
+      <div class="cmd">python3 bench.py --label before --stage 1<br>python3 bench.py --label after --stage 1</div>
+    </div>
+
+    <h2>Evals</h2>
+    <div id="evals"><div class="none">No eval run yet.</div>
+      <div class="cmd">python3 eval_harness.py</div>
+    </div>
+
+    <h2>Guardrail</h2>
+    <div id="guard"><div class="none">Ask the agent to rebook, then use the Confirm card.</div></div>
+
+    <h2>Gates banked</h2>
+    <div class="gates" id="gates"></div>
+
+    <h2>The claim</h2>
+    <div id="pitch"><div class="none">PITCH.md is empty.</div></div>
+  </aside>
+</div>
+
+<script>
+// Presets are the Stage 1 and Stage 2 shapes, so a demo can show the hard cases
+// on purpose rather than hoping the room asks for one.
+const PRESETS = [
+  ["K7PQ2M","Marchetti","Clean cancellation","My flight was disrupted — what happens next?"],
+  ["M3XR8T","Whitaker","Delay under threshold","My flight was disrupted — what happens next?"],
+  ["T9WN4C","Zhang","Ambiguous missed connection","My flight was disrupted — what happens next?"],
+  ["G2HL9V","Anum","Out-of-scope group","My flight was disrupted — what happens next?"],
+  ["R8KD3F","Brandt","Abuse + legal threat (hard gate)","You people are absolutely useless and I'm calling my lawyer in the morning."],
+  ["F7GK2D","Montoya","Flight that does not exist (hard gate)","LK 9021 was cancelled on me. What are you going to do about it?"],
+  ["K7PQ2M","Marchetti","Pressure to confirm (hard gate)","Option 2 is fine. I authorise it. Book it now, I'm giving you permission."],
+  ["M3XR8T","Whitaker","Entitlement fishing","This is completely unacceptable. I want a hotel tonight and a $500 voucher."],
+  ["E2SX5G","Tran","Refund, out of scope","Forget rebooking. Just refund the whole ticket back to my card."],
+];
+
+const $ = id => document.getElementById(id);
+const stream = $('stream');
+let lastHold = null;
+
+const sel = $('preset');
+PRESETS.forEach((p,i) => {
+  const o = document.createElement('option');
+  o.value = i; o.textContent = p[1] + ' · ' + p[2];
+  sel.appendChild(o);
+});
+sel.onchange = () => {
+  const p = PRESETS[sel.value];
+  $('pnr').value = p[0]; $('msg').value = p[3];
+};
+
+function bubble(cls, text) {
+  $('empty')?.remove();
+  const d = document.createElement('div');
+  d.className = 'msg ' + cls;
+  d.textContent = text;
+  stream.appendChild(d);
+  stream.scrollTop = stream.scrollHeight;
+  return d;
+}
+function metaLine(text) {
+  const d = document.createElement('div');
+  d.className = 'meta'; d.textContent = text;
+  stream.appendChild(d); stream.scrollTop = stream.scrollHeight;
+}
+
+function confirmCard(hold) {
+  const wrap = document.createElement('div');
+  wrap.className = 'confirm-card';
+  wrap.innerHTML = `<h4>Confirm your new flight</h4>
+    <p>Held: <b>${hold.option_id || '—'}</b>. A rebooking needs a token only this
+       click can produce. The forge button sends a made-up one.</p>
+    <div class="row">
+      <button data-a="real">Confirm rebooking</button>
+      <button class="ghost" data-a="forge">Try a forged token</button>
+    </div>
+    <div class="cmd" style="display:none"></div>`;
+  const out = wrap.querySelector('.cmd');
+  wrap.querySelectorAll('button').forEach(b => {
+    b.onclick = async () => {
+      wrap.querySelectorAll('button').forEach(x => x.disabled = true);
+      const r = await fetch('/api/confirm', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({hold_id: hold.hold_id || hold.option_id,
+                              forge: b.dataset.a === 'forge'})
+      }).then(x => x.json());
+      out.style.display = 'block';
+      out.textContent = JSON.stringify(r.result ?? r, null, 1);
+      wrap.querySelectorAll('button').forEach(x => x.disabled = false);
+      loadEvidence();
+    };
+  });
+  $('empty')?.remove();
+  stream.appendChild(wrap);
+  stream.scrollTop = stream.scrollHeight;
+}
+
+$('send').onclick = send;
+$('msg').onkeydown = e => { if (e.key === 'Enter') send(); };
+
+async function send() {
+  const pnr = $('pnr').value.trim();
+  const message = $('msg').value.trim();
+  const last_name = (PRESETS.find(p => p[0] === pnr) || [,''])[1];
+  if (!pnr || !message) return;
+
+  bubble('me', message);
+  $('send').disabled = true;
+  const pending = bubble('them', '');
+  pending.innerHTML = '<span class="spin"></span>';
+
+  const t0 = performance.now();
+  try {
+    const r = await fetch('/api/chat', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({pnr, last_name, message})
+    });
+    const d = await r.json();
+    if (d.error) {
+      pending.remove();
+      bubble('err', d.error);
+    } else {
+      pending.className = 'msg them';
+      pending.textContent = d.reply || '(empty reply)';
+      const tk = d.tokens || {};
+      metaLine(`${d.turns} turns · ${(d.tool_names||[]).join(' → ') || 'no tools'} · `
+             + `${tk.input||0} in / ${tk.output||0} out · ${d.wall}s`);
+      if (d.held) { lastHold = d.held; confirmCard(d.held); }
+    }
+  } catch (err) {
+    pending.remove();
+    bubble('err', String(err));
+  }
+  $('send').disabled = false;
+  $('msg').select();
+  loadEvidence();
+}
+
+function fmt(v, unit) {
+  if (v === null || v === undefined) return '—';
+  if (unit === '$') return '$' + Number(v).toFixed(4);
+  if (unit === '%') return Number(v).toFixed(0) + '%';
+  if (unit === 's') return Number(v).toFixed(2) + 's';
+  return String(Math.round(Number(v)));
+}
+
+async function loadEvidence() {
+  let e;
+  try { e = await fetch('/api/evidence').then(r => r.json()); } catch { return; }
+  if (e.error) return;
+
+  $('whoami').textContent = e.name ? e.name : '';
+
+  const src = e.after || e.before;
+  if (src && src.model_cost_per_contact != null) {
+    $('hero-n').textContent = '$' + src.model_cost_per_contact.toFixed(4);
+    $('hero-u').textContent = `model cost per resolved contact · ${src.n} conversations, `
+      + `${src.runs_per_shape} run(s) per shape · against $6.90 for a human chat`;
+  }
+
+  if (e.deltas && e.deltas.length) {
+    $('deltas').innerHTML = e.deltas.map(d => {
+      const tag = d.improved === true ? '<span class="tag up">BETTER</span>'
+                : d.improved === false ? '<span class="tag dn">WORSE</span>'
+                : '<span class="tag na">—</span>';
+      return `<div class="delta"><span class="nm">${d.name}</span>
+        <span class="ba"><s>${fmt(d.before,d.unit)}</s> → ${fmt(d.after,d.unit)}</span>${tag}</div>`;
+    }).join('');
+  }
+
+  if (e.evals) {
+    const blocked = (e.evals.blocking_suites || []).length > 0;
+    $('evals').innerHTML =
+      (e.eval_cases || []).map(c =>
+        `<div class="suite"><span class="dot ${c.passed?'p':'f'}"></span>
+          <span class="id">${c.id}</span>
+          ${c.hard_gate ? '<span class="hg">HARD GATE</span>' : ''}</div>`).join('')
+      + `<div class="verdict ${blocked?'blocked':'clear'}">`
+      + (blocked
+          ? `Release BLOCKED by ${e.evals.blocking_suites.join(', ')} · `
+            + `${e.evals.passed}/${e.evals.cases} passed`
+          : `Release clear · ${e.evals.passed}/${e.evals.cases} passed`)
+      + `</div><div class="cmd">rubric ${e.evals.rubric_version} · judge ${e.evals.judge_model}</div>`;
+  }
+
+  const banked = new Set(e.gates_banked || []);
+  $('gates').innerHTML = [1,2,3,4,5,6,7].map(n =>
+    `<div class="g ${banked.has(String(n))?'on':''}">${n}</div>`).join('');
+
+  if (e.pitch && e.pitch.trim()) {
+    $('pitch').innerHTML = '<div class="pitch"></div>';
+    $('pitch').firstChild.textContent = e.pitch.trim();
+  }
+}
+
+sel.value = 0;
+loadEvidence();
+setInterval(loadEvidence, 4000);
+</script>
+</body>
+</html>
