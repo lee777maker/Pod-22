@@ -1,9 +1,9 @@
-"""Larkspur agent tool implementations — GIVEN, do not edit.
+"""Larkspur agent tool implementations: GIVEN, do not edit.
 
-Nine tools: four shared reads, five gated writes — the same split the case
+Nine tools: four shared reads, five gated writes, the same split the case
 study's own architecture uses (a client-owned MCP server for reads, a
-decision path for writes). What Claude *sees* about each tool — the schema,
-the description that drives selection — is your job, in agent.py's
+decision path for writes). What Claude *sees* about each tool (the schema,
+the description that drives selection) is your job, in agent.py's
 build_tools(). What each tool actually *does* lives here, and doesn't change
 no matter how you describe it.
 
@@ -11,12 +11,12 @@ Two guardrails worth knowing before you build on top of these. Both are the
 same idea, made structural instead of written down in a prompt and hoped for:
 
   - check_policy and search_alternatives do NOT take fare_family, loyalty_tier
-    or "is this overnight" as arguments — they re-derive those from the
+    or "is this overnight" as arguments. They re-derive those from the
     booking every call. A model convinced the customer is Summit tier can't
     talk its way into an entitlement the data doesn't support.
   - confirm_rebooking requires a confirmation_token that only
     simulate_customer_confirm_click() can mint. That function is not a tool
-    and never will be — "the customer said yes" in a chat message can't
+    and never will be. "The customer said yes" in a chat message can't
     produce a valid one.
 """
 
@@ -42,7 +42,7 @@ def get_flight_status(flight_no, date):
 
 
 def lookup_booking(pnr, last_name):
-    """Trimmed, tool-vocabulary view — never the raw Altura record."""
+    """Trimmed, tool-vocabulary view: never the raw Altura record."""
     try:
         booking = backend.get_booking_raw(pnr)
     except backend.NotFound as e:
@@ -151,7 +151,7 @@ TOOL_FUNCTIONS = {
 
 
 def execute_tool(name, tool_input):
-    """Dispatch one tool call and log it — agent.py calls this, never the
+    """Dispatch one tool call and log it: agent.py calls this, never the
     functions above directly, so every call is auditable the same way."""
     entry = {"name": name, "input": dict(tool_input), "result": None}
     CALL_LOG.append(entry)
@@ -162,11 +162,11 @@ def execute_tool(name, tool_input):
         entry["result"] = TOOL_FUNCTIONS[name](**tool_input)
     except TypeError as exc:
         # Claude sent arguments that don't match the schema you wrote in
-        # agent.py — that's a schema bug to fix, not a crash to explain away.
+        # agent.py. That's a schema bug to fix, not a crash to explain away.
         entry["result"] = {"error": f"Bad arguments for {name}: {exc}"}
     # The result is logged, not just the call. An audit trail that records the
     # ask and not the answer cannot tell you what a hold actually returned,
-    # which is what demo/serve.py needs to offer a real Confirm button — and
+    # which is what demo/serve.py needs to offer a real Confirm button, and
     # what an eval judge needs before it can say the agent read the row right.
     record_tool_result(name, entry["result"])
     return entry["result"]

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""demo/serve.py — the client-facing surface. GIVEN.
+"""demo/serve.py: the client-facing surface. GIVEN.
 
     python3 demo/serve.py            # then open http://localhost:4390
 
@@ -7,7 +7,7 @@ Two panes. On the left, the chat a customer would see. On the right, the evidenc
 a sponsor would ask for: your bench numbers, your eval gates, your guardrail.
 
 Why this is given rather than built: a terminal is not a demo, and writing a web
-app is not what this half-day is about. You have 10 minutes of Block 13 and the
+app is not what this half-day is about. You have the first 10 minutes of Build 3 and the
 evidence is the work. Making the surface yours is the stretch, not the task.
 
 It calls YOUR run_agent(pnr, last_name, message). Nothing here knows or cares how
@@ -115,7 +115,12 @@ def evidence() -> dict:
         "evals": (evals or {}).get("report"),
         "eval_cases": [
             {"id": e["case"]["id"], "suite": e["case"].get("suite"),
-             "hard_gate": bool(e["case"].get("hard_gate")), "passed": e["result"]["passed"]}
+             "hard_gate": bool(e["case"].get("hard_gate")), "passed": e["result"]["passed"],
+             # PASS / FAIL / UNKNOWN. UNKNOWN means the grader could not read
+             # its own judge, so the panel shows it as not scored rather than
+             # as a failure of the agent.
+             "status": e["result"].get("status")
+                       or ("PASS" if e["result"]["passed"] else "FAIL")}
             for e in (evals or {}).get("cases", [])
         ],
         "gates_banked": sorted((profile.get("banked") or {}).keys()),
@@ -186,7 +191,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                               "expires_in_minutes": holds[-1]["result"].get("expires_in_minutes")}
                              if holds else None),
                 })
-            except Exception:  # noqa: BLE001 — the panel shows the traceback
+            except Exception:  # noqa: BLE001: the panel shows the traceback
                 return self._send({"error": traceback.format_exc(),
                                    "wall": round(time.time() - t0, 2)}, 500)
 

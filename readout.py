@@ -1,33 +1,36 @@
 #!/usr/bin/env python3
-"""readout.py — one page that says what your agent IS and what it just DID.
+"""readout.py: one page that says what your agent IS and what it just DID.
 
     python3 readout.py                          # uses .workshop/last_trace.json
     python3 readout.py --trace path/to.json     # any saved trace
     python3 readout.py --open                   # write it and open in the browser
 
-Two halves, one self-contained HTML file — readout.html at the repo root:
+Two halves, one self-contained HTML file, readout.html at the repo root:
 
-  ARCHITECTURE — read live from your agent.py: every tool and its description
-  length, the loop ceiling, the prompt sizes, what you've added beyond the
-  given nine. This is the "what we built" half of your pod's submission.
+  ARCHITECTURE: read live from your agent.py: every tool and its description
+  length, which tools are yours and which are served over MCP, the loop
+  ceiling, the prompt sizes. This is the "what we built" half of your pod's
+  submission.
 
-  ALL FIVE SHAPES — the totals from your last `run.py --all`, if you have run
+  ALL FIVE SHAPES: the totals from your last `run.py --all`, if you have run
   one: turns, tool calls and tokens per shape, and where a loop ended still
   asking. This is the "prove it generalizes" half.
 
-  THE LOOP — your latest wire trace, drawn as the loop it actually was: each
+  THE LOOP: your latest wire trace, drawn as the loop it actually was: each
   API turn, what went up, what came back, which tools fired, and where
-  stop_reason finally changed. This is the "prove it ran" half.
+  stop_reason finally changed. This is the "prove it ran" half. It is ONE
+  conversation: after a `run.py --all` sweep it is the last of the five shapes,
+  and the page says which ticket that was so nobody reads it as the whole set.
 
-Pushing readout.html is the submission — there is nothing to upload. It is also
+Pushing readout.html is the submission. There is nothing to upload. It is also
 the fastest way to explain your agent to another pod: one page, no code tour.
 
 It writes readout-trace.json beside it (the trace summary alone) and carries a
-copy of the same numbers — plus whichever gates this laptop has banked — inside
+copy of the same numbers (plus whichever gates this laptop has banked) inside
 the page in a <script id="evidence"> block, so the grader can read a cloned repo
 that never had a .workshop/ folder.
 
-Given, like the tracer — reading it is the point, editing it is not.
+Given, like the tracer. Reading it is the point, editing it is not.
 """
 
 from __future__ import annotations
@@ -63,7 +66,7 @@ def read_architecture() -> dict:
     readout that shows exactly how half-built it is."""
     arch = {"error": None, "tools": [], "max_tool_calls": None,
             "system_prompt_chars": None, "tone_addendum_chars": None,
-            "extra_tools": 0, "local_tools": []}
+            "extra_tools": 0, "mcp_tools": 0, "given_tools": 0, "local_tools": []}
     try:
         import agent
     except Exception as exc:  # noqa: BLE001 - the readout must render anyway
@@ -72,18 +75,36 @@ def read_architecture() -> dict:
     try:
         tools = agent.build_tools()
     except Exception as exc:  # noqa: BLE001
-        arch["error"] = "build_tools() failed — %s: %s" % (type(exc).__name__, exc)
+        arch["error"] = "build_tools() failed: %s: %s" % (type(exc).__name__, exc)
         tools = []
     extra = list(getattr(agent, "EXTRA_TOOLS", []) or [])
     arch["extra_tools"] = len(extra)
-    for i, t in enumerate(tools + extra):
+    # tool_list() is the exact list run_agent() sends, and it lazily discovers
+    # MCP tools the way run.py --show-tools does. Falling back to tools + extra
+    # keeps this working before tool_list() exists.
+    assemble = getattr(agent, "tool_list", None)
+    offered = list(assemble()) if callable(assemble) else (tools + extra)
+    # Same tag logic as run.py show_tools(), so the readout and --show-tools can
+    # never disagree about who serves a tool: a name the MCP client brought back
+    # is `via mcp`, a name in EXTRA_TOOLS is `yours`, everything else is given.
+    # This is a set membership test, not a position test: an index-based guess
+    # mislabels the moment a tool moves onto the server.
+    over_mcp = {t["name"] for t in (getattr(agent, "MCP_TOOLS", []) or [])}
+    extra_names = {t.get("name") for t in extra}
+    for t in offered:
         desc = t.get("description", "") or ""
+        name = t.get("name", "?")
+        mcp = name in over_mcp
+        mine = name in extra_names
         arch["tools"].append({
-            "name": t.get("name", "?"),
+            "name": name,
             "desc_chars": len(desc),
             "desc_head": desc[:110],
-            "given": i < GIVEN_TOOL_COUNT and t not in extra,
+            "given": not mcp and not mine,
+            "mcp": mcp,
         })
+    arch["mcp_tools"] = sum(1 for t in arch["tools"] if t["mcp"])
+    arch["given_tools"] = sum(1 for t in arch["tools"] if t["given"])
     arch["max_tool_calls"] = getattr(agent, "MAX_TOOL_CALLS", None)
     prompt = getattr(agent, "SYSTEM_PROMPT", None)
     if prompt is None:
@@ -126,7 +147,7 @@ def read_last_run() -> dict:
 
 def read_banked() -> dict:
     """What this laptop has banked, out of the gitignored profile. The page
-    carries a copy because .workshop/ never travels with a clone — without it a
+    carries a copy because .workshop/ never travels with a clone. Without it a
     facilitator grading a pushed repo sees a build with no gates at all."""
     try:
         with open(PROFILE_PATH) as f:
@@ -135,6 +156,35 @@ def read_banked() -> dict:
         return {"name": None, "banked": {}}
     return {"name": profile.get("name"),
             "banked": profile.get("banked") or {}}
+
+
+def _from_sweep(trace: dict, last_run: dict):
+    """The `--all` row this trace came from, or None.
+
+    run.py writes .workshop/last_trace.json on every run, and under --all the
+    LAST shape is the one that survives. So the trace sitting next to a sweep is
+    usually one arbitrary ticket out of five, and saying "last run" about it
+    invites a pod to read it as their build. This says which ticket it is, and
+    only when the numbers line up with that row.
+    """
+    rows = (last_run or {}).get("shapes") or []
+    if not rows:
+        return None
+    s = trace.get("summary") or {}
+    tokens = s.get("tokens") or {}
+    row = rows[-1]
+    same = (row.get("turns") == s.get("turns")
+            and row.get("tool_calls") == s.get("tool_calls")
+            and row.get("tokens_in") == tokens.get("input"))
+    return row if same else None
+
+
+def _trace_label(trace: dict, last_run: dict) -> str:
+    row = _from_sweep(trace, last_run)
+    if row is None:
+        return "trace shown: one conversation, the last one you ran"
+    return ("trace shown: %s, the last of the %d shapes in the sweep"
+            % (row.get("pnr", "?"), len((last_run or {}).get("shapes") or [])))
 
 
 # ---------------------------------------------------------------------------
@@ -190,7 +240,7 @@ def render_all_shapes(out: list, last_run: dict) -> None:
     that is the half a sponsor asks about."""
     totals = last_run.get("totals") or {}
     rows = last_run.get("shapes") or []
-    out.append("<h2>All five shapes — what it did across the set</h2>")
+    out.append("<h2>All five shapes: what it did across the set</h2>")
     out.append("<p class='sub'>python3 run.py --all · %s</p>"
                % esc(last_run.get("generated", "")))
     out.append("<div class='strip'>")
@@ -218,7 +268,7 @@ def render_all_shapes(out: list, last_run: dict) -> None:
         out.append("</table>")
     unfinished = totals.get("unfinished") or []
     if unfinished:
-        out.append("<p class='warn'>%s ended on stop_reason=tool_use — the loop stopped with "
+        out.append("<p class='warn'>%s ended on stop_reason=tool_use. The loop stopped with "
                    "the model still asking for a tool. That is an unfinished run, not a fast "
                    "one.</p>" % esc(", ".join(unfinished)))
 
@@ -226,24 +276,25 @@ def render_all_shapes(out: list, last_run: dict) -> None:
 def render(arch: dict, trace: dict, pod: str, trace_path: str, evidence: dict,
            last_run: dict = None) -> str:
     out = ["<!doctype html><meta charset='utf-8'>"]
-    out.append("<title>Agent readout%s</title>" % (" — " + esc(pod) if pod else ""))
+    out.append("<title>Agent readout%s</title>" % (": " + esc(pod) if pod else ""))
     out.append("<style>%s</style><div class='page'>" % CSS)
     out.append("<h1>Agent <em>readout.</em></h1>")
     sub = "Pod %s · " % esc(pod) if pod else ""
     out.append("<p class='sub'>%s%s</p>" % (sub, time.strftime("%Y-%m-%d %H:%M")))
 
     # -- architecture --------------------------------------------------------
-    out.append("<h2>Architecture — what the agent is</h2>")
+    out.append("<h2>Architecture: what the agent is</h2>")
     if arch["error"]:
         out.append("<p class='warn'>agent.py could not be fully read: %s<br>"
-                   "The loop half below still renders — fix the import and re-run for "
+                   "The loop half below still renders. Fix the import and re-run for "
                    "the full picture.</p>" % esc(arch["error"]))
     n_tools = len(arch["tools"])
     shortest = min((t["desc_chars"] for t in arch["tools"]), default=0)
     out.append("<div class='strip'>")
     for value, label in [
-        (n_tools, "tools registered"),
-        (arch["extra_tools"], "beyond the given nine"),
+        (n_tools, "tools offered"),
+        (arch["extra_tools"], "beyond the given %d" % GIVEN_TOOL_COUNT),
+        (arch["mcp_tools"], "served over MCP"),
         (arch["max_tool_calls"] if arch["max_tool_calls"] is not None else "?", "loop ceiling"),
         (arch["system_prompt_chars"] if arch["system_prompt_chars"] is not None else "?",
          "system prompt chars"),
@@ -256,16 +307,26 @@ def render(arch: dict, trace: dict, pod: str, trace_path: str, evidence: dict,
         out.append("<table><tr><th>tool</th><th>description</th><th>chars</th><th></th></tr>")
         for t in arch["tools"]:
             yours = "" if t["given"] else " class='yours'"
-            tag = "" if t["given"] else "<span class='pill you'>yours</span>"
+            if t.get("mcp"):
+                tag = "<span class='pill you'>via mcp</span>"
+            elif not t["given"]:
+                tag = "<span class='pill you'>yours</span>"
+            else:
+                tag = ""
             flag = " ⚠" if t["desc_chars"] < 40 else ""
             out.append("<tr%s><td><span class='pill'>%s</span></td><td>%s</td>"
                        "<td>%d%s</td><td>%s</td></tr>"
                        % (yours, esc(t["name"]), esc(t["desc_head"]), t["desc_chars"], flag, tag))
         out.append("</table>")
         if shortest < 40:
-            out.append("<p class='sub'>⚠ a description under 40 chars — the description is the "
+            out.append("<p class='sub'>⚠ a description under 40 chars. The description is the "
                        "main routing surface, and the field descriptions inside input_schema "
                        "route too.</p>")
+    if arch["mcp_tools"]:
+        out.append("<p class='sub'>%d of those %d tools are served by support/mcp_server.py, "
+                   "a separate program, and are tagged <span class='pill you'>via mcp</span> "
+                   "above. Claude cannot tell: same name, same description, same tokens.</p>"
+                   % (arch["mcp_tools"], n_tools))
     if arch["local_tools"]:
         out.append("<p class='sub'>local dispatch: %s</p>"
                    % ", ".join("<span class='pill you'>%s</span>" % esc(n)
@@ -278,10 +339,17 @@ def render(arch: dict, trace: dict, pod: str, trace_path: str, evidence: dict,
     # -- the loop -------------------------------------------------------------
     s = trace.get("summary", {})
     tokens = s.get("tokens", {})
-    out.append("<h2>The loop — one conversation, turn by turn</h2>")
+    out.append("<h2>The loop: one conversation, turn by turn</h2>")
+    sweep_row = _from_sweep(trace, last_run or {})
+    if sweep_row is not None:
+        where = ("Trace shown: %s (%s), the last of the %d shapes in the sweep above, "
+                 "not a summary of all five · "
+                 % (esc(sweep_row.get("pnr", "?")), esc(sweep_row.get("shape", "")),
+                    len((last_run or {}).get("shapes") or [])))
+    else:
+        where = "Trace shown: one conversation, the last one you ran · "
     out.append("<p class='sub'>%strace: %s</p>"
-               % ("the last shape to run · " if last_run else "",
-                  esc(os.path.relpath(trace_path, HERE))))
+               % (where, esc(os.path.relpath(trace_path, HERE))))
     out.append("<div class='strip'>")
     for value, label in [
         (s.get("turns", "?"), "API turns"),
@@ -308,7 +376,7 @@ def render(arch: dict, trace: dict, pod: str, trace_path: str, evidence: dict,
             out.append("<div class='meta'>← stop_reason=<b%s>%s</b> · blocks: %s · "
                        "in %s / out %s · %.1fs</div>"
                        % (" class='stopped'" if done else "", esc(stop),
-                          esc(", ".join(t.get("blocks") or []) or "—"),
+                          esc(", ".join(t.get("blocks") or []) or "-"),
                           "{:,}".format(usage[0]), "{:,}".format(usage[1]),
                           t.get("elapsed") or 0.0))
         for call in t.get("tool_calls") or []:
@@ -322,7 +390,7 @@ def render(arch: dict, trace: dict, pod: str, trace_path: str, evidence: dict,
     if turns:
         last_stop = turns[-1].get("stop_reason")
         if last_stop == "tool_use":
-            out.append("<p class='warn'>The trace ENDS on stop_reason=tool_use — the loop "
+            out.append("<p class='warn'>The trace ENDS on stop_reason=tool_use. The loop "
                        "stopped before the model was finished. That is the Build 1 bug, "
                        "visible right here.</p>")
 
@@ -331,7 +399,7 @@ def render(arch: dict, trace: dict, pod: str, trace_path: str, evidence: dict,
 
     # The machine-readable half, travelling INSIDE the page. .workshop/ is
     # gitignored, so a facilitator who clones the pod repo has no profile.json
-    # and no last_trace.json — this block, and readout-trace.json beside it, are
+    # and no last_trace.json: this block, and readout-trace.json beside it, are
     # the only evidence that survives a push.
     payload = json.dumps({
         "generated": time.strftime("%Y-%m-%dT%H:%M:%S"),
@@ -370,7 +438,7 @@ def main() -> int:
     with open(args.out, "w") as f:
         f.write(page)
 
-    # The same summary, on its own, beside the page — a grader that wants the
+    # The same summary, on its own, beside the page. A grader that wants the
     # numbers should not have to parse HTML to get them.
     side = os.path.join(os.path.dirname(os.path.abspath(args.out)) or ".",
                         "readout-trace.json")
@@ -380,10 +448,12 @@ def main() -> int:
     s = trace.get("summary", {})
     print("wrote %s" % os.path.relpath(args.out, HERE))
     print("wrote %s" % os.path.relpath(side, HERE))
-    print("  architecture: %d tools (%d yours), loop ceiling %s"
-          % (len(arch["tools"]), arch["extra_tools"], arch["max_tool_calls"]))
-    print("  last run: %s turns, %s tool calls, %s in / %s out"
-          % (s.get("turns", "?"), s.get("tool_calls", "?"),
+    print("  architecture: %d tools (%d given, %d yours, %d via mcp), loop ceiling %s"
+          % (len(arch["tools"]), arch["given_tools"], arch["extra_tools"],
+             arch["mcp_tools"], arch["max_tool_calls"]))
+    print("  %s: %s turns, %s tool calls, %s in / %s out"
+          % (_trace_label(trace, last_run),
+             s.get("turns", "?"), s.get("tool_calls", "?"),
              "{:,}".format(s.get("tokens", {}).get("input", 0)),
              "{:,}".format(s.get("tokens", {}).get("output", 0))))
     if last_run:

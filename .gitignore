@@ -6,12 +6,13 @@
 .venv/
 venv/
 
-# Local progress: banked codes, traces, bench numbers. Yours, not the pod's.
-# (The Build 2 probe lives at the repo root as build2_probe.txt, so it travels
-# with the canon push without an exception here.)
+# Local progress: banked codes, traces, bench numbers. Yours, not the pod's,
+# and nothing in here has to be committed for a gate to count.
+# (The Build 2 probe lives at the repo root as build2_probe.txt, so it is a
+# normal file and needs no exception here.)
 .workshop/
 
-# The readout is the block's submission, and a stale one is worse than none.
+# The readout is the build's submission, and a stale one is worse than none.
 # Ignored here so nobody hand-commits the copy sitting in their folder;
 # pod_sync.py --push-canon regenerates it and force-adds it, which is the one
 # way it is meant to reach the repo.

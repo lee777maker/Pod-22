@@ -1,4 +1,4 @@
-"""Wire tracer — see what your agent actually sent and got back.
+"""Wire tracer: see what your agent actually sent and got back.
 
 This file is GIVEN, and it is the point of the whole exercise. A slide shows
 you a printed answer. This shows you the *request/response cycle*: how many
@@ -33,6 +33,19 @@ def _short(value: Any, limit: int = 88) -> str:
     text = json.dumps(value, default=str) if not isinstance(value, str) else value
     text = " ".join(text.split())
     return text if len(text) <= limit else text[: limit - 1] + "…"
+
+
+def _via_mcp(name: str) -> bool:
+    """True when this tool came over MCP rather than out of this process.
+
+    The import is lazy and optional on purpose: trace.py has to keep working in
+    a clone with no MCP client in it, and on day one there is nothing to ask.
+    """
+    try:
+        from .mcp_client import tool_names
+    except Exception:  # noqa: BLE001
+        return False
+    return name in tool_names
 
 
 class Tracer:
@@ -94,6 +107,10 @@ class Tracer:
                     "name": getattr(block, "name", "?"),
                     "id": getattr(block, "id", None),
                     "input": getattr(block, "input", {}),
+                    # Recorded here, when the tool list that went out is still
+                    # the one in hand. save() carries it into the JSON, so
+                    # readout.py and the eval judge see it too.
+                    "via_mcp": _via_mcp(getattr(block, "name", "?")),
                     # Filled in later by record_result(), once the tool has
                     # actually run. The ask and the answer are different facts:
                     # a trace that records only the ask cannot tell you whether
@@ -170,7 +187,7 @@ class Tracer:
             flags.append("thinking=%s" % (turn["thinking"] or "off"))
             if turn["effort"]:
                 flags.append("effort=%s" % turn["effort"])
-            flags.append("format=%s" % ("ON" if turn["format"] else "—"))
+            flags.append("format=%s" % ("ON" if turn["format"] else "-"))
             if turn["tool_choice"]:
                 flags.append("tool_choice=%s" % turn["tool_choice"])
 
@@ -190,7 +207,9 @@ class Tracer:
                             turn["usage"][0], turn["usage"][1], cache,
                             turn["elapsed"] or 0.0))
             for call in turn["tool_calls"]:
-                lines.append("      ⚙ %s(%s)" % (call["name"], _short(call["input"], 70)))
+                tag = " [mcp]" if call.get("via_mcp") else ""
+                lines.append("      ⚙ %s%s(%s)"
+                             % (call["name"], tag, _short(call["input"], 70)))
 
         s = self.summary()
         lines += [
@@ -299,8 +318,8 @@ def wrap(client: Any, tracer: Tracer) -> TracedClient:
 # Tool results
 #
 # The tracer sees the request/response cycle, which is where a tool CALL shows
-# up. What the tool ANSWERED happens outside that cycle — in support/tools.py
-# for the given nine, in agent.py's LOCAL_TOOLS for the ones you add — so it
+# up. What the tool ANSWERED happens outside that cycle (in support/tools.py
+# for the given nine, in agent.py's LOCAL_TOOLS for the ones you add), so it
 # has to be handed back in. wrap() marks the current conversation's tracer as
 # the one to hand it to, and one conversation runs at a time.
 # ---------------------------------------------------------------------------

@@ -1,8 +1,11 @@
-The last line is scored. An honest gap beats a number you cannot defend.
+# PITCH.md
 
-What we built:
-What it does:
-The number, before and after:
-The guardrail we can prove:
-What we'd do next:
+Six lines and a lever. Both of the last two are scored.
+
+Built:
+Does:
+Number:
+Guardrail:
+Next:
 Still broken:
+Lever: <cost | speed | intelligence>

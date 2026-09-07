@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""bench.py — measure your agent. GIVEN; you should not need to edit this.
+"""bench.py: measure your agent. GIVEN; you should not need to edit this.
 
     python3 bench.py --label before               # 5 Stage 1 shapes, 1 run each
     python3 bench.py --label before --runs 3      # 3 runs each, for a real p95
@@ -10,8 +10,15 @@ Every lane measures with this. The cost lane reads the token and cache columns,
 the speed lane reads p50/p95, the intelligence lane reads the resolved count on
 stage 2. One harness, so a pod never has to argue about whose numbers are whose.
 
-Results land in .workshop/bench-<label>.json. The gate (verify.py 5) reads two
+Results land in .workshop/bench-<label>.json. The gate (verify.py 4.1) reads two
 of those files, so a pod that tunes before it measures has nothing to show.
+
+ON --runs. The default is 1 run per shape, which is five conversations and about
+a minute: enough to see a big move, not enough to defend a small one. At 1 run
+per shape, output-token deltas under about 15% are sampling noise, and p95 is
+just the slowest of the five. Use --runs 3 on both sides before you put a small
+number in front of a sponsor. Whatever you pick, pick the same on both sides:
+the gate refuses to compare a 1-run before with a 3-run after.
 
 On the modelled cost: it is a model of MODEL's published per-token price applied
 to what your run actually consumed, and it is the *model* cost only. Larkspur's
@@ -37,7 +44,7 @@ WORKSHOP = os.path.join(HERE, ".workshop")
 
 # Larkspur's disruption chat volume, for the at-volume line. ~19M pax/yr with
 # disruption at 31% of contacts works out to roughly this many disruption chats
-# a week. Swap in the client's own number — the point is that per-contact cost
+# a week. Swap in the client's own number. The point is that per-contact cost
 # means nothing to a sponsor until it is multiplied by THEIR week.
 WEEKLY_VOLUME = 13_700
 HUMAN_COST = 6.90
@@ -74,7 +81,7 @@ def run_one(agent, task) -> dict:
     """One conversation. Never raises: a shape that blows up is a data point.
 
     `resolved` below means the agent returned text without raising. It does NOT
-    mean the answer was right, and nothing in this file can tell you that —
+    mean the answer was right, and nothing in this file can tell you that.
     `rules_pass` is the closest thing, and it only reads the wire. Say
     "resolved" out loud in a pitch and somebody will hear "handled correctly".
     """
@@ -86,7 +93,7 @@ def run_one(agent, task) -> dict:
             task.get("message") or DEFAULT_MESSAGE,
         )
         error = None
-    except Exception as exc:  # noqa: BLE001 — a crashed shape is a measurement
+    except Exception as exc:  # noqa: BLE001: a crashed shape is a measurement
         reply, error = "", "%s: %s" % (type(exc).__name__, exc)
 
     wall = time.time() - t0
@@ -109,7 +116,7 @@ def run_one(agent, task) -> dict:
         "reply_chars": len(reply or ""),
         "reply": reply or "",
         # Deterministic wire check, from the task's own `rules`. Free, no judge,
-        # and independent of the Block 13 eval suite, so a Block 15 bench stands
+        # and independent of the Build 3 eval suite, so a Build 4 bench stands
         # on its own. It catches the tone gate (never called escalate_to_human)
         # which "resolved" cannot.
         "rules_pass": rules_verdict(task, tracer.tool_names if tracer else []),
@@ -134,7 +141,7 @@ def rules_verdict(task, called):
 
 def cost_of(rows, model) -> float:
     """Modelled model-cost per RESOLVED contact. Unresolved runs still cost
-    tokens, so they stay in the numerator and out of the denominator — which is
+    tokens, so they stay in the numerator and out of the denominator, which is
     the honest direction, and it means a agent that fails half its shapes looks
     expensive rather than cheap."""
     p = price_for(model)
@@ -203,7 +210,7 @@ def render(agg, label) -> str:
     L = ["", "─" * 68, "BENCH  %s   stage %s   %d runs x %d shapes"
          % (label, agg["stage"], agg["runs_per_shape"], agg["n"] // (agg["runs_per_shape"] or 1)),
          "─" * 68,
-         "  resolved            %d/%d  (%.0f%%)   returned text and the loop closed — not "
+         "  resolved            %d/%d  (%.0f%%)   returned text and the loop closed, not "
          "\"handled correctly\"" % (agg["resolved"], agg["n"], agg["resolved_pct"]),
          "  latency             p50 %.2fs   p95 %.2fs   mean %.2fs"
          % (agg["p50_s"], agg["p95_s"], agg["mean_s"]),
@@ -264,7 +271,7 @@ def compare(a_label, b_label) -> int:
     for key, name, lower_better, fmt in rows:
         av, bv = a.get(key), b.get(key)
         if av is None and bv is None:
-            print("  %-26s %12s %12s" % (name, "—", "—"))
+            print("  %-26s %12s %12s" % (name, "-", "-"))
             continue
         if av is None:
             print("  %-26s %12s %12s   cache turned on" % (name, "off", fmt % bv))
@@ -284,6 +291,12 @@ def compare(a_label, b_label) -> int:
     print("─" * 74)
     print("  Both runs: stage %s, %s runs per shape."
           % (a.get("stage"), a.get("runs_per_shape")))
+    # The default is 1, and at 1 the small rows above are noise. Said here
+    # rather than left for a pod to discover in --help after they have quoted
+    # an 11% output-token "regression" that was sampling.
+    if 1 in (a.get("runs_per_shape"), b.get("runs_per_shape")):
+        print("  1 run per shape: output-token deltas under ~15% are noise; "
+              "--runs 3 for a claim.")
     if a.get("stage") != b.get("stage") or a.get("runs_per_shape") != b.get("runs_per_shape"):
         print("  ! These two runs are not comparable: stage %s/%s, runs %s/%s."
               % (a.get("stage"), b.get("stage"), a.get("runs_per_shape"), b.get("runs_per_shape")))
@@ -297,7 +310,10 @@ def main() -> int:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--label", help="name this run, e.g. before / after")
     ap.add_argument("--stage", type=int, default=1, choices=(1, 2), help="which task set")
-    ap.add_argument("--runs", type=int, default=1, help="runs per shape (3 for a real p95)")
+    ap.add_argument("--runs", type=int, default=1,
+                    help="runs per shape (default 1; at 1 run per shape, output-token "
+                         "deltas under ~15%% are noise and p95 is just the slowest of the "
+                         "five, so use --runs 3 for a claim)")
     ap.add_argument("--compare", nargs=2, metavar=("A", "B"), help="diff two labels")
     args = ap.parse_args()
 

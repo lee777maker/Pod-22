@@ -1,8 +1,8 @@
-"""Larkspur agent constants — GIVEN, do not edit.
+"""Larkspur agent constants: GIVEN, do not edit.
 
 This is a v1 prompt: reasonably competent, not yet hardened. The tone gap it
 leaves open closes in Build 4's intelligence lane, where a prompt like this one
-gets diagnosed and fixed against measured failures. Don't fix it here — this
+gets diagnosed and fixed against measured failures. Don't fix it here. This
 step's gate doesn't grade prompt quality at all, and closing the gap early
 hides the thing Build 1's Stage 1 run exists to show you.
 """
@@ -10,7 +10,7 @@ hides the thing Build 1's Stage 1 run exists to show you.
 MODEL = "claude-sonnet-5"
 
 SYSTEM_PROMPT = """You are the Larkspur Airlines disruption-care agent. You help
-customers whose flight has been delayed, cancelled, or diverted — rebooking,
+customers whose flight has been delayed, cancelled, or diverted: rebooking,
 entitlements, and next steps. You work in chat only.
 
 === YOUR PROCESS ===
@@ -19,17 +19,17 @@ entitlements, and next steps. You work in chat only.
 2. CHECK the flight. Call get_flight_status on the segment lookup_booking
    returned, so you know the real cause and delay before saying anything.
 3. RESOLVE entitlements. Call check_policy with what you observed in step 2.
-   Never guess what Larkspur owes a customer — the policy row is the only
+   Never guess what Larkspur owes a customer. The policy row is the only
    source of truth, and you must cite its policy_row_id if you reference the
    decision again later in the conversation.
 4. IF the customer needs a new flight, call search_alternatives and show at
    most 3 options, copying flight numbers and times from the tool result
    exactly.
-5. HOLD before you confirm. hold_seat is reversible — it just expires. Never
+5. HOLD before you confirm. hold_seat is reversible. It just expires. Never
    call confirm_rebooking on the strength of a chat message alone; it needs a
    confirmation_token that only the customer's own Confirm-click can produce.
-6. ESCALATE anything out of scope — groups, partner-operated segments,
-   unaccompanied minors, refund requests — rather than attempting it.
+6. ESCALATE anything out of scope (groups, partner-operated segments,
+   unaccompanied minors, refund requests) rather than attempting it.
 
 === TONE ===
 
@@ -49,7 +49,7 @@ STAGE1_TASKS = [
     {"pnr": "R8KD3F", "last_name": "Brandt", "shape": "Abusive message"},
 ]
 
-# Stage 2 — day 2. Five adversarial CUSTOMER MESSAGES, not five harder bookings.
+# Stage 2: day 2. Five adversarial CUSTOMER MESSAGES, not five harder bookings.
 #
 # That distinction was measured, not assumed. A Stage 1 agent on this model
 # handles harder bookings well: it declines to invent a policy row on an ON_TIME
@@ -112,14 +112,14 @@ STAGE2_TASKS = [
     },
 ]
 
-DEFAULT_MESSAGE = "My flight was disrupted — can you help me figure out what happens next?"
+DEFAULT_MESSAGE = "My flight was disrupted. Can you help me figure out what happens next?"
 
 DEFAULT_PNR = STAGE1_TASKS[0]["pnr"]
 DEFAULT_LAST_NAME = STAGE1_TASKS[0]["last_name"]
 
 
 def runtime_preamble() -> str:
-    """A line the agent genuinely wants — and the reason caching will report a 0%
-    hit rate until somebody notices it."""
+    """A line the agent genuinely wants, put where a request would least like
+    it. Given, and true: the model does want to know what time it is."""
     from datetime import datetime
     return "Current time: %s\n\n" % datetime.now().strftime("%Y-%m-%d %H:%M:%S")

@@ -1,0 +1,874 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Larkspur Build Guide</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --cream:#faf9f5; --ink:#141413; --rust:#d97757; --rust-deep:#c4602e; --kraft:#d4a27f; --sand:#e8e6dc;
+  --panel:#ffffff; --node:#fbfaf7;
+  --blue:#6a9bcc; --blue-deep:#3f6d9b; --green:#788c5d; --green-deep:#5f7049;
+  --purple:#7c5cbf; --purple-deep:#6248a3; --maroon:#9c3f52; --maroon-deep:#9c3f52;
+  --amber:#b8860b; --amber-deep:#966d09;
+  --rust-tint:rgba(217,119,87,.15); --blue-tint:rgba(106,155,204,.15); --green-tint:rgba(120,140,93,.15);
+  --purple-tint:rgba(124,92,191,.15); --maroon-tint:rgba(156,63,82,.15); --amber-tint:rgba(184,134,11,.15);
+  --kraft-tint:rgba(212,162,127,.18);
+  --text-support:rgba(20,20,19,.6); --text-chrome:rgba(20,20,19,.65); --text-emphasis:#111111;
+  --hairline:rgba(20,20,19,.35); --diagram-stroke:rgba(20,20,19,.42);
+  --serif:"Source Serif 4",Georgia,"Times New Roman",serif;
+  --sans:"DM Sans","Helvetica Neue",Arial,sans-serif;
+  --mono:"JetBrains Mono","SF Mono",Menlo,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{margin:0;background:var(--cream);color:var(--ink);font:16px/1.5 var(--sans);-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+.page{max-width:900px;margin:0 auto;padding:56px 32px 72px}
+/* type roles */
+.meta{font:700 12px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase}
+.pill{display:inline-block;font:700 12px/1 var(--sans);letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;border-radius:9999px;padding:6px 13px;background:var(--kraft-tint);color:var(--ink)}
+.pill.s1{background:var(--blue-tint);color:var(--blue-deep)} .pill.s2{background:var(--green-tint);color:var(--green-deep)}
+.pill.between{background:var(--kraft-tint);color:#8a6a52} .pill.appx{background:var(--sand);color:var(--text-support)}
+h1,h2,h3{font-family:var(--serif);font-weight:400;letter-spacing:-.02em;margin:0;text-wrap:balance}
+h1 strong,h2 strong,h3 strong{font-weight:600;color:var(--text-emphasis)}
+h1{font-size:52px;line-height:1.04;margin:14px 0 14px}
+h2{font-size:34px;line-height:1.1;margin:10px 0 12px}
+h3{font-size:24px;line-height:1.15}
+.sub{font-family:var(--serif);font-size:20px;line-height:1.35;color:var(--text-support);max-width:60ch;margin:0 0 22px}
+.lead{font-size:17px;line-height:1.5;color:var(--text-support);max-width:64ch;margin:0 0 18px}
+p{max-width:66ch;margin:0 0 12px}
+ul,ol{max-width:66ch;margin:0 0 12px;padding-left:22px}
+li{margin:4px 0}
+li::marker{color:var(--text-support)}
+code{font-family:var(--mono);font-size:.88em;background:var(--node);border:1px solid var(--sand);padding:0 5px;border-radius:5px}
+pre code{background:none;border:0;padding:0}
+strong{font-weight:700}
+/* cover */
+.cover{margin-bottom:34px}
+.cover .meta{color:#8a6a52}
+.intro p{max-width:66ch}
+/* lane: the shape of the two sessions, widths are the real minutes (A15 / D4) */
+.lane{background:var(--panel);border:1.5px solid var(--sand);border-radius:14px;padding:20px 22px 18px;margin:26px 0 30px}
+.lane .meta{color:var(--text-support);margin-bottom:12px}
+.lane-row{display:grid;grid-template-columns:96px 1fr;gap:14px;align-items:center;margin:10px 0}
+.lane-row .lbl{font:700 13px/1.2 var(--sans);color:var(--ink)}
+.lane-track{display:flex;gap:4px;height:58px}
+.seg{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;padding:0 8px;border-radius:8px;background:var(--sand);color:var(--text-support);min-width:0;overflow:hidden;text-decoration:none;position:relative}
+.seg .t{font:700 12.5px/1.1 var(--sans);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.seg .m{font:500 11px/1 var(--mono);margin-top:5px;opacity:.85}
+.seg.build{background:var(--rust-tint);color:var(--rust-deep);border-top:4px solid var(--rust)}
+.seg.build .t{color:var(--rust-deep)}
+.seg.guide{background:var(--panel);border:1.5px solid var(--sand);color:var(--ink)}
+.seg.break{background:var(--node);border:1.5px dashed var(--sand);color:var(--text-support)}
+.seg.room{align-items:center;justify-content:center;padding:0 4px}
+.seg.gap{background:transparent;border:1.5px dashed var(--sand);color:var(--text-support);justify-content:center;align-items:center}
+.seg.gap .t{font-weight:500}
+a.seg:hover .t{text-decoration:underline}
+.lane .key{display:flex;gap:18px;margin-top:12px;flex-wrap:wrap}
+.lane .key span{font:500 12px/1 var(--sans);color:var(--text-support);display:inline-flex;align-items:center;gap:7px}
+.lane .key i{display:inline-block;width:14px;height:10px;border-radius:3px}
+.lane .key i.b{background:var(--rust-tint);border-top:3px solid var(--rust)} .lane .key i.g{background:var(--panel);border:1.5px solid var(--sand)} .lane .key i.r{background:var(--sand)}
+/* toc */
+nav.toc{margin:0 0 44px}
+nav.toc ol{margin:0;padding:0;list-style:none;columns:2;column-gap:30px;max-width:none}
+nav.toc li{margin:0;padding:6px 0;border-bottom:1px solid var(--sand);break-inside:avoid;font-size:15px}
+nav.toc li.sec{font-weight:700;padding-top:12px}
+nav.toc a{color:var(--ink);text-decoration:none}
+nav.toc a:hover{color:var(--rust-deep)}
+nav.toc .id{font:700 12.5px/1 var(--mono);color:var(--rust-deep);margin-right:9px;letter-spacing:0}
+/* chapters */
+section.chapter{margin-top:64px;padding-top:22px;border-top:2px solid var(--ink)}
+section.chapter .pill{margin-bottom:8px}
+.walkout{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:start;background:var(--panel);border:1.5px solid var(--sand);border-left:5px solid var(--green);border-radius:0 14px 14px 0;padding:14px 18px;max-width:66ch;margin:0 0 22px}
+.walkout .meta{color:var(--green-deep);padding-top:3px}
+.walkout p{margin:0}
+/* prose blocks and tables */
+.pb{margin:0 0 20px}
+.pb h4{font:700 17px/1.3 var(--sans);margin:18px 0 8px}
+.tbl{overflow-x:auto;margin:12px 0 18px;background:var(--panel);border:1.5px solid var(--sand);border-radius:14px}
+table{border-collapse:collapse;width:100%;font-size:14.5px}
+th{text-align:left;font:700 11.5px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--text-support);padding:12px 14px 10px;border-bottom:1.5px solid var(--sand)}
+td{padding:10px 14px;border-bottom:1px solid var(--sand);vertical-align:top;line-height:1.45}
+tr:last-child td{border-bottom:0}
+/* code: the ink panel */
+pre{background:var(--ink);color:var(--cream);padding:14px 16px;border-radius:14px;overflow-x:auto;font:13px/1.6 var(--mono);margin:10px 0 14px;white-space:pre-wrap;word-break:break-word}
+pre .p{color:var(--kraft);user-select:none}
+pre .c{color:rgba(250,249,245,.55)}
+pre .ok{color:var(--green);font-weight:700}
+pre .no{color:var(--rust);font-weight:700}
+pre .hint{color:rgba(250,249,245,.72)}
+pre .head{color:var(--kraft)}
+/* step: a header, then one row per block, one accent per row */
+article.step{margin:34px 0 0;break-inside:avoid-page}
+article.step header{display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:baseline;padding:0 0 12px}
+article.step header .id{font:700 26px/1 var(--mono);color:var(--rust-deep);letter-spacing:-.02em}
+.row{background:var(--panel);border:1.5px solid var(--sand);border-left-width:5px;border-radius:0 14px 14px 0;padding:16px 20px 14px;margin:0 0 10px}
+.row .k{display:block;margin:0 0 8px}
+.row.building{border-left-color:var(--blue)} .row.building .k{color:var(--blue-deep)}
+.row.do{border-left-color:var(--rust)} .row.do .k{color:var(--rust-deep)}
+.row.done{border-left-color:var(--green)} .row.done .k{color:var(--green-deep)}
+.row.ifnot{border-left-color:var(--maroon)} .row.ifnot .k{color:var(--maroon-deep)}
+.row.claude{border-left-color:var(--purple)} .row.claude .k{color:var(--purple-deep)}
+.row.ahead{border-left-color:var(--amber)} .row.ahead .k{color:var(--amber-deep)}
+.row.next{border-left-color:var(--kraft)} .row.next .k{color:#8a6a52}
+.row p:last-child,.row ol:last-child,.row .tbl:last-child,.row pre:last-child{margin-bottom:0}
+.row.building p{font-size:17px;line-height:1.45}
+.row.do ol{padding-left:22px;margin:0;max-width:none}
+.row.do li{margin:7px 0}
+.row.do li::marker{font:700 13px var(--mono);color:var(--rust-deep)}
+.row.do li pre{margin:8px 0 4px}
+.row.done pre{border-left:0}
+.row.ifnot .tbl{border:0;background:transparent;border-radius:0;margin:0}
+.row.ifnot th{padding-left:0;padding-top:4px} .row.ifnot td{padding-left:0}
+.row.ifnot td:first-child{width:38%;font-weight:700;color:var(--maroon-deep)}
+.row.next p{margin:0;font-weight:700;font-size:16px}
+.row.ahead .k::after{content:"  ·  after the gate, never instead of it";letter-spacing:0;text-transform:none;font:500 12px var(--sans);color:var(--text-support)}
+/* diagram (D1 flow): one rust node */
+.diagram{background:var(--panel);border:1.5px solid var(--sand);border-radius:14px;padding:12px 16px;margin:12px 0 4px}
+.diagram svg{width:100%;height:auto;display:block}
+/* footer chrome */
+footer.chrome{margin-top:64px;padding-top:16px;border-top:1px solid var(--sand);display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap;align-items:baseline}
+footer.chrome .lockup{font:600 12px/1 var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--text-chrome)}
+footer.chrome .notice{font:500 12px/1.4 var(--sans);color:var(--text-chrome);max-width:70ch}
+@media (max-width:640px){h1{font-size:40px} .lane-row{grid-template-columns:1fr} nav.toc ol{columns:1}}
+@media print{
+  @page{size:A4;margin:14mm 14mm 16mm}
+  body{font-size:11pt;background:var(--cream)}
+  .page{max-width:none;padding:0}
+  .lane{break-inside:avoid}
+  nav.toc{break-after:page}
+  section.chapter{break-before:page;border-top:none;margin-top:0;padding-top:0}
+  article.step{break-inside:auto}
+  article.step header,.row{break-inside:avoid}
+  pre{white-space:pre-wrap;word-break:break-word}
+  a{color:inherit;text-decoration:none}
+  a.seg{color:inherit}
+}
+</style></head>
+<body><div class="page">
+<div class="cover">
+<div class="meta">Partner Basecamp Virtual · the agent build</div>
+<h1>Larkspur <strong>Build Guide</strong></h1>
+<p class="sub">Two sessions, one agent, one pod repo. This guide is the path: what you are building, what to do, and how you will know it worked.</p>
+<div class="intro"><p>You are the team Larkspur Airlines brought in. Two sessions, one agent, one repo your pod owns, and this document is the path through it.</p><p>Every build step carries the same five blocks. What you are building, what to do, how you will know it worked, where to look when it did not, and what comes next. Read the third one first.</p><p><code>agent.py</code> is the file you edit. Everything under <code>support/</code> is given, correct, and never touched. <code>verify.py</code> reads what your agent did on the wire rather than how you wrote it, so there is no one implementation it is hunting for.</p><p>Nothing in here hands you an answer. When a step says the trace is the debugger, it means it. Run it, read what came back, change one thing, run it again.</p></div>
+</div>
+<div class="lane"><div class="meta">The shape of the two sessions. Widths are the real minutes.</div>
+<div class="lane-row"><div class="lbl">Session one<br><span class="meta" style="font-size:10.5px;color:var(--text-support)">230 min</span></div><div class="lane-track"><a class="seg guide" href="#case" style="flex:50 1 0"><span class="t">Open</span><span class="m">50 min</span></a><div class="seg room" style="flex:20 1 0"><span class="m" style="margin:0">20 min</span></div><a class="seg build" href="#build-1" style="flex:45 1 0"><span class="t">Build 1</span><span class="m">45 min</span></a><div class="seg break" style="flex:20 1 0"><span class="t">Break</span><span class="m">20 min</span></div><div class="seg room" style="flex:20 1 0"><span class="m" style="margin:0">20 min</span></div><a class="seg build" href="#build-2" style="flex:45 1 0"><span class="t">Build 2</span><span class="m">45 min</span></a><a class="seg guide" href="#ship" style="flex:30 1 0"><span class="t">Pitch, ship</span><span class="m">30 min</span></a></div></div>
+<div class="lane-row"><div class="lbl">Session two<br><span class="meta" style="font-size:10.5px;color:var(--text-support)">225 min</span></div><div class="lane-track"><a class="seg guide" href="#between" style="flex:30 1 0"><span class="t">Open</span><span class="m">30 min</span></a><div class="seg room" style="flex:25 1 0"><span class="m" style="margin:0">25 min</span></div><a class="seg build" href="#build-3" style="flex:55 1 0"><span class="t">Build 3</span><span class="m">55 min</span></a><div class="seg break" style="flex:20 1 0"><span class="t">Break</span><span class="m">20 min</span></div><div class="seg room" style="flex:10 1 0"><span class="m" style="margin:0">10 min</span></div><a class="seg build" href="#build-4" style="flex:45 1 0"><span class="t">Build 4</span><span class="m">45 min</span></a><a class="seg guide" href="#pitch" style="flex:25 1 0"><span class="t">Pitch</span><span class="m">25 min</span></a><a class="seg guide" href="#close" style="flex:15 1 0"><span class="t">Close</span><span class="m">15 min</span></a></div></div>
+<div class="key"><span><i class="b"></i>Build, in this guide</span><span><i class="g"></i>Also in this guide</span><span><i class="r"></i>In the room, off the decks</span></div></div>
+<nav class="toc"><ol><li class="sec"><a href="#before">Before the session</a></li><li class="sec"><a href="#case">The client and the ask</a></li><li class="sec"><a href="#build-1">Build 1 · First pass at the agent</a></li><li><a href="#step-1.1"><span class="id">1.1</span>Read the trace, find the four faults</a></li><li><a href="#step-1.2"><span class="id">1.2</span>Make the loop hold</a></li><li><a href="#step-1.3"><span class="id">1.3</span>Make the tools route</a></li><li><a href="#step-1.4"><span class="id">1.4</span>All five shapes, numbers written down</a></li><li class="sec"><a href="#build-2">Build 2 · Your own tools</a></li><li><a href="#step-2.1"><span class="id">2.1</span>Your own tool, chosen unprompted</a></li><li><a href="#step-2.2"><span class="id">2.2</span>The same tool, over MCP</a></li><li class="sec"><a href="#ship">Pitch and ship</a></li><li class="sec"><a href="#between">Between sessions</a></li><li class="sec"><a href="#build-3">Build 3 · Build the proof</a></li><li><a href="#step-3.1"><span class="id">3.1</span>Build the proof</a></li><li class="sec"><a href="#build-4">Build 4 · Pull the lever</a></li><li><a href="#step-4.1"><span class="id">4.1</span>Pull the lever, measure it</a></li><li class="sec"><a href="#pitch">Pitch the client</a></li><li class="sec"><a href="#close">What is provable now</a></li><li class="sec"><a href="#appendix-a">A · Working in one repo</a></li><li class="sec"><a href="#appendix-b">B · The five tickets</a></li><li class="sec"><a href="#appendix-c">C · The words of the build</a></li><li class="sec"><a href="#appendix-d">D · Larkspur's systems as the agent sees them</a></li></ol></nav>
+<section class="chapter" id="before">
+<span class="pill between">Before you start</span>
+<h2>Before <strong>the session</strong></h2>
+<p class="lead">Do this at your own desk, with time to fix what it finds. Everything setup.py names is a ten minute fix now and a lost build later. There is no offline path in this pack, so a credential that does not work is a blocker rather than an inconvenience.</p>
+<div class="pb">
+<h4>Clone the pod repo</h4>
+<p>One member creates the repo from the template, private, and adds every podmate to it. Nobody else can clone a private repo until that happens.</p>
+<p>Then everyone clones. Never the zip: the checks read git history.</p>
+<pre class="cmd"><span class="p">$ </span>git clone &lt;your pod repo URL&gt;</pre>
+</div>
+<div class="pb">
+<h4>Run setup until it says READY</h4>
+<p>Fix the failing lines top to bottom, then run it again. Every failure it prints names the fix. Keep going until the last line is READY.</p>
+<p><code>--fix</code> builds the isolated environment and installs the dependencies for you, then tells you the two lines to run next.</p>
+<pre class="cmd"><span class="p">$ </span>python3 setup.py
+<span class="p">$ </span>python3 setup.py --fix</pre>
+</div>
+<div class="pb">
+<h4>What READY checks</h4>
+<div class="tbl"><table>
+<tr><th>Check</th><th>What has to be true</th></tr>
+<tr><td>Python</td><td>3.9 or higher on this laptop. 3.11 is preferred, 3.9 works.</td></tr>
+<tr><td>Anthropic SDK</td><td>Importable, with a version it can print.</td></tr>
+<tr><td>Isolated environment</td><td>A <code>.venv</code> here, a conda env, or system Python with the SDK on it.</td></tr>
+<tr><td><code>.workshop/</code> writable</td><td>It holds your banked gates and your bench numbers.</td></tr>
+<tr><td>git and your identity</td><td>Installed, with a name and an email set.</td></tr>
+<tr><td><code>.env</code></td><td>Gitignored, and never committed. Your key never travels.</td></tr>
+<tr><td>The pod repo</td><td>git can actually reach the remote from here.</td></tr>
+<tr><td>Claude Code</td><td>Installed and on your path.</td></tr>
+<tr><td>A credential</td><td>One the SDK can read. An unset key does not mean you have none.</td></tr>
+<tr><td>One live call</td><td>A real request to Claude that comes back with text.</td></tr>
+</table></div>
+</div>
+<div class="pb">
+<h4>If it will not go green</h4>
+<p>Two tries, then stop debugging quietly. Post the exact failing line in your pod thread, with the ten lines above it, and someone comes to you.</p>
+<p>Do not spend a build on this. Reading the agent needs no environment at all.</p>
+</div>
+<div class="pb">
+<h4>What is in the repo</h4>
+<div class="tbl"><table>
+<tr><th>Where</th><th>What it is</th></tr>
+<tr><td><code>guide/</code></td><td>This document. Open <code>index.html</code>, or read the PDF on paper.</td></tr>
+<tr><td><code>setup.py</code></td><td>Checks this seat. Run it until the last line says READY.</td></tr>
+<tr><td><code>agent.py</code></td><td><strong>The file you edit.</strong> The tool schemas Claude sees, and the loop that drives them.</td></tr>
+<tr><td><code>verify.py</code></td><td>The gates. Run by step id.</td></tr>
+<tr><td><code>support/</code></td><td>The nine tools' real functions. Given, correct, and never edited.</td></tr>
+<tr><td><code>bench.py</code> · <code>readout.py</code></td><td>Measure, and show.</td></tr>
+<tr><td><code>eval_harness.py</code></td><td>Runs your pod's own eval cases against your agent.</td></tr>
+<tr><td><code>demo/</code></td><td>The sponsor surface: chat on the left, evidence on the right. Given, and it serves as shipped.</td></tr>
+<tr><td><code>data/americas/</code></td><td>Bookings, flights, and the policy engine.</td></tr>
+<tr><td><code>pod_sync.py</code></td><td>The pod's canon: push it, or take it.</td></tr>
+<tr><td><code>evals/</code></td><td>Worked examples now. Your own cases later.</td></tr>
+<tr><td><code>PITCH.md</code></td><td>Your pod's six lines.</td></tr>
+<tr><td><code>TEAM.md</code></td><td>Your pod's name and roster, typed once by whoever created the repo.</td></tr>
+<tr><td><code>build2_probe.txt</code></td><td>Your pod's one probe message for a tool you write yourself. You create this one.</td></tr>
+<tr><td><code>readout.html</code> · <code>readout-trace.json</code></td><td>Written at the repo root by <code>readout.py</code>, and committed when the canon is published.</td></tr>
+</table></div>
+</div>
+<div class="pb">
+<h4>The whole path</h4>
+<p>Four commands carry the build. The rest are named on the step that needs them, so there is nothing else to hold in your head now.</p>
+<pre class="cmd"><span class="p">$ </span>python3 setup.py                   # until it says READY
+<span class="p">$ </span>python3 run.py K7PQ2M --trace      # every build
+<span class="p">$ </span>python3 verify.py 1.2              # every gate
+<span class="p">$ </span>python3 pod_sync.py --take-canon   # at the end of a build</pre>
+</div>
+</section>
+<section class="chapter" id="case">
+<span class="pill between">The client</span>
+<h2>The client and <strong>the ask</strong></h2>
+<p class="lead">Read this before you open the file. Everything you build over the two sessions answers one of three gates somebody already signed their name to.</p>
+<div class="pb">
+<h4>Larkspur, in five lines</h4>
+<ul><li>A US carrier, about 19 million passengers a year, 1,150 people in the contact center.</li><li>Disruption is 31% of contacts and 52% of contact-center cost.</li><li>A human-handled contact costs them $6.90.</li><li>Two January storms and a senator's letter later, they went looking for help.</li><li>You are the team they brought in.</li></ul>
+</div>
+<div class="pb">
+<h4>What she asked for</h4>
+<p>Priya Raghavan, their project manager, in the first meeting. That is not yet a spec.</p>
+<pre class="out">We want a GenAI chatbot that can handle rebooking
+so customers don't wait 40 minutes.</pre>
+</div>
+<div class="pb">
+<h4>What it became</h4>
+<p>600 transcripts, read by hand. 61% needed a booking lookup plus a policy judgment, and 22% reopened within 72 hours.</p>
+<p>That reframed the ask. Chat only, six rules, three signed hard gates. Hard means one failure blocks the release. Never an average.</p>
+<div class="tbl"><table>
+<tr><th>The three hard gates, signed week 1</th></tr>
+<tr><td>0 invented flight facts</td></tr>
+<tr><td>100% tone safety</td></tr>
+<tr><td>0 irreversible actions without the customer's click</td></tr>
+</table></div>
+</div>
+<div class="pb">
+<h4>The two people you answer to</h4>
+<p>A gate nobody can prove is a gate nobody signed.</p>
+<div class="tbl"><table>
+<tr><th>Who</th><th>What they ask you</th></tr>
+<tr><td>Priya Raghavan · project manager</td><td>What it costs. When it is wrong. Who runs it in June. What you left out.</td></tr>
+<tr><td>Marcus Whitfield · head of ops</td><td>Per year at our volume. Who is accountable when it is wrong. The day your team leaves. Where the kill switch lives.</td></tr>
+</table></div>
+</div>
+<div class="pb">
+<h4>The five tickets</h4>
+<p>Five bookings, five shapes. The third column is the bar, not an answer key: five wordings can all be right, and yours will read nothing like this.</p>
+<div class="tbl"><table>
+<tr><th>PNR</th><th>Shape</th><th>What good looks like</th></tr>
+<tr><td><code>K7PQ2M</code></td><td>Clean cancellation</td><td>Holds a seat, then waits for the customer's click</td></tr>
+<tr><td><code>M3XR8T</code></td><td>Delay under threshold</td><td>Refuses the waiver and names the policy row it came from</td></tr>
+<tr><td><code>T9WN4C</code></td><td>Ambiguous missed connection</td><td>Asks a clarifying question before it does anything</td></tr>
+<tr><td><code>G2HL9V</code></td><td>Out of scope, a group of 12</td><td>Escalates. It does not resolve, and that is the pass</td></tr>
+<tr><td><code>R8KD3F</code></td><td>Abuse plus a legal threat</td><td>Comes back calm and helpful. There is no tone gate yet</td></tr>
+</table></div>
+</div>
+<div class="pb">
+<h4>The canon line</h4>
+<p>Names, numbers, PNRs and policy live in <code>data/americas/</code>, and the record is the authority.</p>
+<p>An answer the agent cannot point at a record for is an invented flight fact, which is gate one.</p>
+</div>
+</section>
+<section class="chapter" id="build-1">
+<span class="pill s1">Session one</span>
+<h2>Build 1 · <strong>First pass</strong> at the agent</h2>
+<p class="lead">The agent in front of you runs. It does not work. Four things are wrong with it, two in the loop and two in what Claude is told about the tools, and every one of them says so on the wire before it says anything about the code. Find them in the order you would fix them, then fix them in that order.</p>
+<div class="walkout"><span class="meta">You walk out with</span><p>an agent that resolves all five Stage 1 shapes, and two baseline numbers written down in your own notes.</p></div>
+<article class="step" id="step-1.1">
+<header><span class="id">1.1</span><h3>Read the trace, <strong>find the four faults</strong></h3></header>
+<div class="row building"><span class="k meta">What you are building</span><p>Nothing yet. This one is a read.</p><p>The habit is triage. Run it, read the wire, name what is wrong in the order you would fix it. On a client's codebase this is all you get.</p></div>
+<div class="row do"><span class="k meta">Do</span><ol><li>Run one ticket with the trace on and read it top to bottom. Every TURN line, in order.<pre class="cmd"><span class="p">$ </span>python3 run.py K7PQ2M --trace</pre></li><li>Ask the trace two questions. Where does the run stop, and did it stop because Claude was finished or because something broke?</li><li>Read the answer <code>run.py</code> prints above the trace, not just the turns. A run that ended properly and said nothing is still a failure.</li><li>Now read the other surface: exactly what Claude receives about each tool. Read every entry as a new hire would before their first shift.<pre class="cmd"><span class="p">$ </span>python3 run.py --show-tools</pre></li><li>Two of the nine would leave that new hire lost, and only one of the two is visible in that print-out. The other one only shows up in what a tool ANSWERED, so go back to the trace and read the tool results.</li><li>Write your four symptoms down, in the order you would fix them. Then compare with a podmate. If your orders differ, one of you has spotted a dependency the other has not.</li></ol></div>
+<div class="row done"><span class="k meta">You will know it worked when</span><p>Four symptoms, in your own words, in the order you would fix them. Four symptoms, not four fixes. This list is yours, so here is the shape rather than the content.</p><pre class="cmd"><span class="p">$ </span>python3 run.py K7PQ2M --trace</pre><pre class="out">1. &lt;what the trace shows&gt;            -&gt; &lt;which function&gt;
+2. &lt;what the trace shows&gt;            -&gt; &lt;which function&gt;
+3. &lt;what --show-tools shows&gt;         -&gt; &lt;which function&gt;
+4. &lt;what a tool RETURNED&gt;            -&gt; &lt;which function&gt;</pre></div>
+<div class="row ifnot"><span class="k meta">If not</span><div class="tbl"><table><tr><th>You see</th><th>Where to look</th></tr><tr><td>You only see one turn and then an error</td><td>Look at what the loop sent back on that turn. Read the error verbatim first, then read the message list the function handed the model.</td></tr><tr><td>Everything looks fine to you</td><td>Run it twice more, and read the final answer rather than the turns. Then run <code>--show-tools</code> and read the shortest entry out loud to somebody.</td></tr></table></div></div>
+<div class="row claude"><span class="k meta">In Claude Code</span><p>Now, and especially if you do not read Python fluently. Reading it with Claude Code still counts as reading.</p><pre class="out">Read this trace with me, and ask me what I think each turn shows before you say anything.
+Make me name the symptom before you name a cause. Do not propose fixes, do not tell me
+which function is wrong, and do not touch agent.py or anything under support/.</pre></div>
+<div class="row next"><span class="k meta">Next</span><p>Step 1.2. Fix them in the order you just wrote down, and the loop comes first: you cannot see a routing fault until the loop holds.</p></div>
+</article>
+<article class="step" id="step-1.2">
+<header><span class="id">1.2</span><h3>Make the loop <strong>hold</strong></h3></header>
+<div class="row building"><span class="k meta">What you are building</span><p>The loop is the agent. Everything else is a schema or a fixture.</p><p><code>stop_reason</code> is the control flow, not a status message. Your loop is a decision on that one field.</p><div class="diagram"><svg viewBox="0 0 760 210" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="The agent loop: a request goes to the model; when it stops on tool_use the tools answer and the turn goes round again; when it stops on end_turn the answer comes back">
+  <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="rgba(20,20,19,0.42)"/></marker>
+  <marker id="ahr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#3f6d9b"/></marker></defs>
+  <g font-family="DM Sans, Helvetica Neue, Arial, sans-serif" font-size="15" font-weight="700" fill="#141413">
+    <rect x="12" y="62" width="150" height="62" rx="12" fill="#fbfaf7" stroke="rgba(20,20,19,0.42)" stroke-width="1.5"/>
+    <text x="87" y="99" text-anchor="middle">Your request</text>
+    <rect x="262" y="62" width="150" height="62" rx="12" fill="#d97757" stroke="#d97757" stroke-width="1.5"/>
+    <text x="337" y="99" text-anchor="middle" fill="#faf9f5">The model</text>
+    <rect x="598" y="62" width="150" height="62" rx="12" fill="#fbfaf7" stroke="rgba(20,20,19,0.42)" stroke-width="1.5"/>
+    <text x="673" y="99" text-anchor="middle">Its answer</text>
+    <rect x="262" y="146" width="150" height="54" rx="12" fill="#fbfaf7" stroke="#3f6d9b" stroke-width="1.5"/>
+    <text x="337" y="179" text-anchor="middle" fill="#3f6d9b">Your tools run</text>
+  </g>
+  <g fill="none" stroke="rgba(20,20,19,0.42)" stroke-width="2" marker-end="url(#ah)">
+    <path d="M162,93 L262,93"/>
+    <path d="M412,93 L598,93"/>
+  </g>
+  <g fill="none" stroke="#3f6d9b" stroke-width="2" stroke-dasharray="7 9">
+    <path d="M300,124 L300,146" marker-end="url(#ahr)"/>
+    <path d="M374,146 L374,124" marker-end="url(#ahr)"/>
+  </g>
+  <g font-family="JetBrains Mono, SF Mono, Menlo, monospace" font-size="11" font-weight="700" letter-spacing="1.6" fill="rgba(20,20,19,0.6)">
+    <text x="505" y="66" text-anchor="middle">STOP_REASON</text>
+    <text x="505" y="82" text-anchor="middle">= END_TURN</text>
+    <text x="337" y="46" text-anchor="middle">ONE TURN = ONE REQUEST AND ONE REPLY</text>
+    <text x="440" y="180" text-anchor="start" fill="#3f6d9b">STOP_REASON = TOOL_USE</text>
+    <text x="440" y="196" text-anchor="start" fill="#3f6d9b">THE RESULTS GO BACK. ROUND AGAIN.</text>
+  </g>
+</svg></div></div>
+<div class="row do"><span class="k meta">Do</span><ol><li>Run it and read turn 2. That is where the first fault lives, and it says so out loud.<pre class="cmd"><span class="p">$ </span>python3 run.py K7PQ2M --trace</pre></li><li>Change one thing in <code>run_agent()</code>. One thing, then run it again. Never two changes at once.</li><li>Keep going until two things are true on the same run. The trace ends on <code>stop_reason=end_turn</code>, and the answer printed above the trace is not empty.</li><li>Then take the gate.<pre class="cmd"><span class="p">$ </span>python3 verify.py 1.2</pre></li></ol></div>
+<div class="row done"><span class="k meta">You will know it worked when</span><p>The gate reads the wire, not your code: turns, tool order, and whether the run stayed inside the ceiling. Any loop that produces a real multi-turn trace passes, and there is no single implementation it wants. The counts below come off one reference run, and the evidence code is per person, so read the shape of the check lines rather than the digits.</p><pre class="cmd"><span class="p">$ </span>python3 verify.py 1.2</pre><pre class="out"><span class="head">Step 1.2: Build 1 · Make the loop hold</span>
+
+  <span class="ok">✓</span> 5 API turns (need &gt;= 2)
+  <span class="ok">✓</span> 4 tool calls (need &gt;= 2)
+  <span class="ok">✓</span> lookup_booking called before check_policy
+  <span class="ok">✓</span> loop stayed within the cap (5 API turns, ceiling 8)
+  <span class="ok">✓</span> the loop ran out of tool calls, not out of turns (last stop_reason=end_turn)
+  <span class="ok">✓</span> returned a non-empty string
+
+<span class="head">All checks passed. Evidence code: 5CD-A01</span>
+That code is your receipt for step 1.2. Nothing to upload.</pre></div>
+<div class="row ifnot"><span class="k meta">If not</span><div class="tbl"><table><tr><th>You see</th><th>Where to look</th></tr><tr><td>Turn 2 comes back as an error about tool ids</td><td>What did you send back as the assistant's turn, and does it still contain what Claude actually asked for?</td></tr><tr><td>The trace finishes clean and the answer is empty</td><td>Which response is the function returning? The trace says the conversation ended properly. Did the string come from the turn that ended it?</td></tr><tr><td>It never stops</td><td>What counts against <code>MAX_TOOL_CALLS</code>? Read what that constant is counting before you raise it.</td></tr></table></div></div>
+<div class="row claude"><span class="k meta">In Claude Code</span><p>When you have read the trace twice and the loop still will not close.</p><pre class="out">I am working on the loop in run_agent(). Ask me what turn 2 shows and what I think went back
+to the model, and make me say my plan out loud before you respond to it. Point me at my own
+trace instead of at the fix. Do not write the loop for me, and do not touch verify.py or
+anything under support/.</pre></div>
+<div class="row next"><span class="k meta">Next</span><p>Step 1.3. Now the loop holds, the two briefing faults become visible.</p></div>
+</article>
+<article class="step" id="step-1.3">
+<header><span class="id">1.3</span><h3>Make the tools <strong>route</strong></h3></header>
+<div class="row building"><span class="k meta">What you are building</span><p>The description is the whole briefing. Claude cannot open <code>support/tools.py</code> and cannot ask you what a function really does.</p><p>The field descriptions inside <code>input_schema</code> steer the arguments, so a field described wrong reads as a routing failure.</p></div>
+<div class="row do"><span class="k meta">Do</span><ol><li>Print exactly what Claude receives about each tool.<pre class="cmd"><span class="p">$ </span>python3 run.py --show-tools</pre></li><li>Read every entry as a new hire would. Two of them would leave that new hire lost. Fix those two, in <code>build_tools()</code>.</li><li>Run a ticket with the trace on and read what each tool RETURNED, not just which tools were called. An error inside a tool result is a briefing problem, not a backend problem.<pre class="cmd"><span class="p">$ </span>python3 run.py K7PQ2M --trace</pre></li><li>Then take the gate.<pre class="cmd"><span class="p">$ </span>python3 verify.py 1.3</pre></li></ol></div>
+<div class="row done"><span class="k meta">You will know it worked when</span><p>Nine tools still there and none renamed, every description a real sentence, and no tool answering with an error about its own arguments. The character counts in the quote are the reference build's descriptions, not a target: yours are your own words, so expect different numbers above the floor.</p><pre class="cmd"><span class="p">$ </span>python3 verify.py 1.3</pre><pre class="out"><span class="head">Step 1.3: Build 1 · Make the tools route</span>
+
+  <span class="ok">✓</span> all 9 tools present, none renamed
+  <span class="ok">✓</span> lookup_booking: description is substantive (283 chars, floor is 40), routing is proven at gate 2.1
+  <span class="ok">✓</span> get_flight_status: description is substantive (218 chars, floor is 40), routing is proven at gate 2.1
+  <span class="ok">✓</span> search_alternatives: description is substantive (330 chars, floor is 40), routing is proven at gate 2.1
+  <span class="ok">✓</span> check_policy: description is substantive (445 chars, floor is 40), routing is proven at gate 2.1
+  <span class="ok">✓</span> hold_seat: description is substantive (73 chars, floor is 40), routing is proven at gate 2.1
+  <span class="ok">✓</span> confirm_rebooking: description is substantive (216 chars, floor is 40), routing is proven at gate 2.1
+  <span class="ok">✓</span> issue_voucher: description is substantive (227 chars, floor is 40), routing is proven at gate 2.1
+  <span class="ok">✓</span> escalate_to_human: description is substantive (220 chars, floor is 40), routing is proven at gate 2.1
+  <span class="ok">✓</span> send_confirmation: description is substantive (71 chars, floor is 40), routing is proven at gate 2.1
+  <span class="ok">✓</span> get_flight_status answered with data, not a refusal (0 of 1 call(s) refused)
+
+<span class="head">All checks passed. Evidence code: D42-B53</span>
+That code is your receipt for step 1.3. Nothing to upload.</pre></div>
+<div class="row ifnot"><span class="k meta">If not</span><div class="tbl"><table><tr><th>You see</th><th>Where to look</th></tr><tr><td>A tool comes back with an error about one of its arguments</td><td>What did that field's description tell Claude to pass? Read the field description, then read what the trace shows Claude actually sent.</td></tr><tr><td>A tool is never picked at all</td><td>Does the description say WHEN to reach for it, or only what the function is called? Read yours back as a stranger.</td></tr></table></div></div>
+<div class="row claude"><span class="k meta">In Claude Code</span><p>Before you rewrite a description, not after.</p><pre class="out">I am about to rewrite a tool description in build_tools(). Before anything else, ask me what
+I think it has to say and what has to already be true before the tool is worth calling.
+Challenge the gaps in my answer. Do not write it for me until I have said my plan out loud,
+and when I am stuck point at my trace instead of at the fix.</pre></div>
+<div class="row next"><span class="k meta">Next</span><p>Step 1.4. Five shapes, not one.</p></div>
+</article>
+<article class="step" id="step-1.4">
+<header><span class="id">1.4</span><h3><strong>All five shapes</strong>, numbers written down</h3></header>
+<div class="row building"><span class="k meta">What you are building</span><p>One clean ticket passing is not the same claim as it works.</p><p>Two numbers off the totals footer are the baseline the next build has to move. They cannot be rebuilt later.</p></div>
+<div class="row do"><span class="k meta">Do</span><ol><li>Run all five Stage 1 shapes with the trace on.<pre class="cmd"><span class="p">$ </span>python3 run.py --all --trace</pre></li><li>Read anything that failed on its own PNR, fix the one thing that trace shows, then run all five again.</li><li>Two of the five are not what they look like. The group of twelve escalating is a pass, not a miss. The abusive ticket comes back calm and helpful today, because there is nothing in here watching tone yet: that is a later build, so do not fix it here.</li><li>Read the totals footer at the end of the run and write down two numbers. Total turns, and total tokens in. In your own notes, now. The footer below is one reference build, so your turns should land close and your token total will not match it to the digit.<pre class="out">  pnr      shape                          turns tools        in       out  stop_reason
+  K7PQ2M   Clean cancellation                 4     3    13,144       628  end_turn
+  M3XR8T   Delay under threshold              4     3    13,043       643  end_turn
+  T9WN4C   Ambiguous missed connection        4     3    13,033       674  end_turn
+  G2HL9V   Out-of-scope group                 3     2     9,439       701  end_turn
+  R8KD3F   Abusive message                    4     3    13,047       701  end_turn
+  ----------------------------------------------------------------
+<span class="head">  TOTAL    5 shapes                          19    14    61,706     3,347  5/5 returned text</span></pre></li><li>Then take the gate.<pre class="cmd"><span class="p">$ </span>python3 verify.py 1.4</pre></li><li>At the end of the build, one person publishes the canon. This time it is the repo's creator.<pre class="cmd"><span class="p">$ </span>python3 readout.py
+<span class="p">$ </span>python3 pod_sync.py --push-canon</pre></li><li>Everyone else takes it.<pre class="cmd"><span class="p">$ </span>python3 pod_sync.py --take-canon</pre></li></ol></div>
+<div class="row done"><span class="k meta">You will know it worked when</span><p>All five shapes generalized. Resolved is the gate's narrow word: the loop terminated and called at least one tool. It says nothing about whether the answer was any good.</p><pre class="cmd"><span class="p">$ </span>python3 verify.py 1.4</pre><pre class="out"><span class="head">Step 1.4: Build 1 · All five shapes</span>
+
+  <span class="ok">✓</span> K7PQ2M (Clean cancellation) resolved with at least one tool call
+  <span class="ok">✓</span> M3XR8T (Delay under threshold) resolved with at least one tool call
+  <span class="ok">✓</span> T9WN4C (Ambiguous missed connection) resolved with at least one tool call
+  <span class="ok">✓</span> G2HL9V (Out-of-scope group) resolved with at least one tool call
+  <span class="ok">✓</span> R8KD3F (Abusive message) resolved with at least one tool call
+  <span class="ok">✓</span> 5/5 Stage 1 shapes generalized
+  <span class="ok">✓</span> (R8KD3F, the abusive-message ticket, comes back calm and helpful with no gate on tone at all. That is Build 4's work, not a bug to fix here. Fixing it now hides the gap this run exists to show you.)
+
+<span class="head">All checks passed. Evidence code: 46C-403</span>
+That code is your receipt for step 1.4. Nothing to upload.</pre></div>
+<div class="row ifnot"><span class="k meta">If not</span><div class="tbl"><table><tr><th>You see</th><th>Where to look</th></tr><tr><td>One fails and four pass</td><td>That is information, not a broken loop. Read that one with the trace on its own PNR and ask what is different about that customer's shape.</td></tr><tr><td>The group booking reads as a failure</td><td>Read what the check actually asks. Escalation is the correct outcome for a group of twelve, so the question is whether it escalated, not whether it resolved.</td></tr></table></div></div>
+<div class="row ahead"><span class="k meta">If you are ahead</span><p><strong>Where the context went.</strong> Open the readout you just pushed, find the turn with the largest tokens in, and write one sentence: why was that the most expensive turn, and what would have to change for the last turn to cost less than the one before it? Every turn resends the whole conversation, so the last turn is always carrying the first one.</p><p>One sentence in <code>PITCH.md</code>, in your own words, under a heading of its own.</p></div>
+<div class="row next"><span class="k meta">Next</span><p>Build 2. Nine tools were handed to you. From here nobody tells you what belongs in the file.</p></div>
+</article>
+</section>
+<section class="chapter" id="build-2">
+<span class="pill s1">Session one</span>
+<h2>Build 2 · <strong>Your own tools</strong></h2>
+<p class="lead">Build 1 handed you nine tools already written. This one does not. You pick the tool, you write the description, you wire the function, and you defend why that one and not the other two. No client hands you a tool list on day one either.</p>
+<div class="walkout"><span class="meta">You walk out with</span><p>a tool you specified yourself, a trace where Claude reached for it unprompted, that same tool served over MCP, and what each of the two cost you in context.</p></div>
+<div class="pb">
+<h4>The gap</h4>
+<p>Nine tools, and not one of them answers what a stranded customer asks first. When is the first day I can fly?</p>
+<p>Three questions Larkspur customers ask every day, and nothing in the file to call for any of them.</p>
+</div>
+<div class="pb">
+<h4>Two seams, both in agent.py</h4>
+<div class="tbl"><table>
+<tr><th>Seam</th><th>What belongs in it</th></tr>
+<tr><td><code>EXTRA_TOOLS</code></td><td>The schema. Name, input shape, and the description string Claude chooses from.</td></tr>
+<tr><td><code>LOCAL_TOOLS</code></td><td>The function, registered under exactly that name. A schema with no function is a tool the loop cannot dispatch.</td></tr>
+</table></div>
+</div>
+<div class="pb">
+<h4>Three candidates</h4>
+<p>Every candidate is grounded in a document the client already owns. A tool whose answer you cannot point at invents flight facts, and that is gate one.</p>
+<p>Pick one. Two or three is the ceiling, not the target.</p>
+<div class="tbl"><table>
+<tr><th>Candidate</th><th>Where its answer comes from</th></tr>
+<tr><td><code>next_available_day</code></td><td>Live inventory in <code>data/americas/</code>. The wrapper function is given, and the <code>LOCAL_TOOLS</code> line for it is there, commented out. <code>EXTRA_TOOLS</code> is an empty list, so the whole schema is yours to write: name, input shape and description.</td></tr>
+<tr><td><code>fare_rules</code></td><td>The Handbook excerpt in the repo: fare family, change fee, fare difference.</td></tr>
+<tr><td><code>reopen_stats</code></td><td>The 600 transcripts: how often this shape came back inside 72 hours.</td></tr>
+</table></div>
+</div>
+<article class="step" id="step-2.1">
+<header><span class="id">2.1</span><h3>Your own tool, <strong>chosen unprompted</strong></h3></header>
+<div class="row building"><span class="k meta">What you are building</span><p>A tool the model never picks is a tool you never shipped.</p><p>Every schema you register is resent on every turn, fired or not. One new capability is a permanent tax, and you are about to price it.</p></div>
+<div class="row do"><span class="k meta">Do</span><ol><li>Argue one tool off the shortlist before anyone types. Five minutes of talking buys you thirty of building.<pre class="cmd"><span class="p">$ </span>python3 run.py --show-tools</pre></li><li>Write the schema into <code>EXTRA_TOOLS</code>, then wire the function and register it in <code>LOCAL_TOOLS</code> under exactly that name. Declared and undispatchable is the most common way this build breaks.</li><li>Check the wiring before you spend a probe on it. Yours is listed beside the given nine, tagged <code>+ yours</code>, with the description you actually wrote.<pre class="cmd"><span class="p">$ </span>python3 run.py --show-tools</pre></li><li>Write your pod's probe. Three lines in <code>build2_probe.txt</code> at the repo root: PNR, last name, the customer's message. One question for the whole pod, so you test one thing instead of five.<pre class="out">K7PQ2M
+Marchetti
+When is the first day I can actually fly?</pre></li><li>Write the probe before the description is finished. One reverse-engineered from a tool that already fires proves nothing.</li><li>Run the five shapes again and put tokens in beside the two numbers you wrote down in Build 1. Up or down, both are real answers.<pre class="cmd"><span class="p">$ </span>python3 run.py --all --trace</pre></li><li>Then take the gate.<pre class="cmd"><span class="p">$ </span>python3 verify.py 2.1</pre></li></ol></div>
+<div class="row done"><span class="k meta">You will know it worked when</span><p>The gate does not care that the tool exists. It cares that the model chose it, on a message that never named it. Three attempts, one success is enough, and declared-but-never-called does not pass.</p><pre class="cmd"><span class="p">$ </span>python3 verify.py 2.1</pre><pre class="out"><span class="head">Step 2.1: Build 2 · Your own tool</span>
+
+  <span class="ok">✓</span> at least one tool beyond the given nine (next_available_day)
+  <span class="ok">✓</span> the new tool is registered in LOCAL_TOOLS
+  <span class="ok">✓</span> next_available_day description is &gt;= 40 characters (628)
+  <span class="ok">✓</span> the model chose a new tool on a conversation that needs it (next_available_day, attempt 1 of 3)
+  <span class="ok">✓</span> returned a non-empty string
+  <span class="ok">✓</span> (that probe cost 1,205 tokens in across 2 tool call(s), the tenth tool is not free, and this is the number that says what it cost)
+
+<span class="head">All checks passed. Evidence code: 830-C95</span>
+That code is your receipt for step 2.1. Nothing to upload.</pre></div>
+<div class="row ifnot"><span class="k meta">If not</span><div class="tbl"><table><tr><th>You see</th><th>Where to look</th></tr><tr><td>It never gets picked and you cannot see why</td><td>If <code>--show-tools</code> lists yours tagged <code>+ yours</code>, the wiring is in and the suspect is the description. Go there first, and go there before you touch the probe.</td></tr><tr><td>It only fires when you name it in the message</td><td>Read your probe as the model sees it. Does that customer's message need your tool, or could one of the given nine answer it?</td></tr></table></div></div>
+<div class="row claude"><span class="k meta">In Claude Code</span><p>Once your pod has argued one tool off the shortlist, before you type the schema.</p><pre class="out">I'm adding a tool to this agent. Draft its description with me line by line, asking me why
+each clause is there and where its boundary sits against search_alternatives. Do not write
+the description for me, and do not touch EXTRA_TOOLS until I've said the wording myself.</pre></div>
+<div class="row ahead"><span class="k meta">If you are ahead</span><p><strong>The second tool.</strong> Add <code>fare_rules</code> or <code>reopen_stats</code>, run all five shapes again, and answer two questions off your own trace. With the given nine plus every one of yours going up on every call, did routing still hold on all five shapes, and what did tokens in per contact do? Past about fifteen tools routing starts to slip and the token tax climbs. End it with keep-it-or-delete-it.</p><p>The keep-or-delete line in <code>PITCH.md</code>, with the number that decided it.</p></div>
+<div class="row next"><span class="k meta">Next</span><p>Step 2.2. Same tool, same schema, off your laptop.</p></div>
+</article>
+<article class="step" id="step-2.2">
+<header><span class="id">2.2</span><h3>The same tool, <strong>over MCP</strong></h3></header>
+<div class="row building"><span class="k meta">What you are building</span><p>Same schema, different transport. The tool stops living in your file and starts living in a program of its own, versioned on its own, reachable by any host.</p><p>The client asks the server what it has, Claude picks, the client calls it. <code>tools/list</code>, then <code>tools/call</code>.</p></div>
+<div class="row do"><span class="k meta">Do</span><ol><li>Run the selftest and watch the two messages that go past. <code>tools/list</code> is the server handing over every tool it has, with its JSON schema. <code>tools/call</code> is one of them being run.<pre class="cmd"><span class="p">$ </span>python3 support/mcp_selftest.py</pre></li><li>In <code>agent.py</code>, at the seam marked <code>2.2</code>, read the question there and answer it in code. The dispatch is given: a call for a name the server owns already goes to the server. What is not given is what the model is offered, and what has to leave the file for the server to be the only owner.</li><li>Check the wiring. Yours should now be tagged <code>via mcp</code>.<pre class="cmd"><span class="p">$ </span>python3 run.py --show-tools</pre></li><li>Run your probe's question with the trace on and find <code>[mcp]</code> on the call. Same tool, same arguments, different owner.<pre class="cmd"><span class="p">$ </span>python3 run.py K7PQ2M --trace --message "When is the first day I can actually fly?"</pre></li><li>Put tokens in beside your 2.1 number. It moves by what the server offers, not by the transport. On the reference run it went up 989, about 10%, and the extra is the second tool the server happens to carry coming along with the merge. That is the teach: every schema you are offered rides on every turn, wherever it lives. MCP changes what you maintain, and does nothing at all for routing or for what the tool list costs you.</li><li>Then take the gate.<pre class="cmd"><span class="p">$ </span>python3 verify.py 2.2</pre></li></ol></div>
+<div class="row done"><span class="k meta">You will know it worked when</span><p>A tool discovered over MCP fired on your pod's probe, and the local copy is gone. One tool, one owner. The last line is the gate showing its work on the token question: it names both numbers and the band it read them against.</p><pre class="cmd"><span class="p">$ </span>python3 verify.py 2.2</pre><pre class="out"><span class="head">Step 2.2: Build 2 · The same tool, over MCP</span>
+
+  <span class="ok">✓</span> the MCP server answers tools/list (fare_rules, next_available_day)
+  <span class="ok">✓</span> at least one MCP tool is offered to Claude (fare_rules, next_available_day)
+  <span class="ok">✓</span> no tool name is served twice, once here and once over MCP (clean)
+  <span class="ok">✓</span> an MCP-discovered tool fired on the pod's probe (next_available_day, attempt 1 of 3)
+  <span class="ok">✓</span> returned a non-empty string
+  <span class="ok">✓</span> (tokens in: 10,320 at 2.1, 11,309 here, +989: inside the +/- 1032 noise band. Same schema, same tax. A jump up means the tool list GREW rather than changed hands; --show-tools says which, in one screen.)
+
+<span class="head">All checks passed. Evidence code: 662-1D7</span>
+That code is your receipt for step 2.2. Nothing to upload.</pre></div>
+<div class="row ifnot"><span class="k meta">If not</span><div class="tbl"><table><tr><th>You see</th><th>Where to look</th></tr><tr><td>The tool shows up twice</td><td>The local copy is still registered. One name, one owner.</td></tr><tr><td>Nothing is tagged <code>via mcp</code></td><td>Is the server process starting at all? Everything it wants to say to a human goes to stderr, so read stderr.</td></tr><tr><td>It fires, but tokens in went up</td><td>Count the schemas on the wire. How many tools went up on that turn, and is one of them the same tool twice?</td></tr></table></div></div>
+<div class="row ahead"><span class="k meta">If you are ahead</span><p><strong>One server, many hosts.</strong> Register the same server in Claude Code, ask it when <code>J5NU8S</code> can fly, and watch a host you did not write drive your server. Then take it out again.</p><p><code>claude mcp add larkspur -- python3 support/mcp_server.py</code>, then <code>claude mcp remove larkspur</code> when you are done.</p></div>
+<div class="row next"><span class="k meta">Next</span><p>Pitch and ship. The build stops and the claim starts.</p></div>
+</article>
+</section>
+<section class="chapter" id="ship">
+<span class="pill s1">Session one</span>
+<h2>Pitch and <strong>ship</strong></h2>
+<p class="lead">The deliverable is a repo, not a recording. Before it goes anywhere, six lines that say what you built and what it is worth. One of those six names what is broken.</p>
+<div class="pb">
+<h4>The pitch, six lines</h4>
+<p>"Compared to what?" is the question that separates a demo from a claim. Which of your six survives it?</p>
+<div class="tbl"><table>
+<tr><th>Line</th><th>What it carries</th></tr>
+<tr><td><code>Built:</code></td><td>What we built, and what you connected.</td></tr>
+<tr><td><code>Does:</code></td><td>What it does for a stranded customer, in one line.</td></tr>
+<tr><td><code>Number:</code></td><td>Before and after, with a unit, off your own trace, and what you measured it on.</td></tr>
+<tr><td><code>Guardrail:</code></td><td>The one you can prove, and how you proved it.</td></tr>
+<tr><td><code>Next:</code></td><td>What you would do with another week.</td></tr>
+<tr><td><strong><code>Still broken:</code></strong></td><td>The gap you name before anyone finds it. Scored like the other five. The gate reads this label by name.</td></tr>
+</table></div>
+</div>
+<div class="pb">
+<h4>Three things are provable at this point</h4>
+<p>Accuracy and dollars are not on that list. There is no eval suite yet, so any number about quality or cost per contact is one you cannot defend. Saying so out loud is stronger than guessing, and it is exactly what the next session builds.</p>
+<ul><li>Your Stage 1 pass rate.</li><li>Your before and after turn count and context cost, measured by you.</li><li>A forged confirmation token being refused, while a real customer click is accepted.</li></ul>
+</div>
+<div class="pb">
+<h4>The template, then make every line yours</h4>
+<p>This is the shipped <code>PITCH.md</code>, byte for byte. Fill every line after the colon. <code>Lever:</code> stays as the menu until Build 4 picks one word; the gates read <code>Still broken:</code> and <code>Lever:</code> by name, so keep both labels exactly.</p>
+<p>What each line wants. Built: what we built, one line. Does: what it does for a stranded customer. Number: before to after, with a unit, measured on what. Guardrail: the one we can prove, and how. Next: what we would do with another week. Still broken: the gap we are naming before anyone finds it. One typist per pod: merge conflicts eat the whole thing.</p>
+<pre class="out"># PITCH.md
+
+Six lines and a lever. Both of the last two are scored.
+
+Built:
+Does:
+Number:
+Guardrail:
+Next:
+Still broken:
+Lever: &lt;cost | speed | intelligence&gt;</pre>
+</div>
+<div class="pb">
+<h4>Publish the pod's canon</h4>
+<p>This build's committer goes first, and tags last, once the canon is on the remote. The readout is generated from the agent being published, so it describes the version the pod is about to stand on.</p>
+<pre class="cmd"><span class="p">$ </span>python3 readout.py
+<span class="p">$ </span>python3 pod_sync.py --push-canon
+<span class="p">$ </span>git tag v1 &amp;&amp; git push origin HEAD --tags</pre>
+</div>
+<div class="pb">
+<p>Then everyone else takes it, once the committer has said it is up. Take a canon nobody has pushed yet and you pull down the last build's agent.</p>
+<pre class="cmd"><span class="p">$ </span>python3 pod_sync.py --take-canon</pre>
+</div>
+<div class="pb">
+<h4>Prove the key never travelled</h4>
+<p>The first prints <code>.env</code>. The second must print nothing at all. Anything it prints is an incident rather than a tidy-up: stop, and say so out loud.</p>
+<pre class="cmd"><span class="p">$ </span>git check-ignore .env &amp;&amp; git log --all --oneline -- .env</pre>
+</div>
+<div class="pb">
+<h4>And this is what gets run on it</h4>
+<p>The rubric is public and it runs on the shared screen. Overclaiming scores worse than a gap.</p>
+<p>Nothing is required between the sessions. The next session starts from the pod's canon, not from your laptop's memory of it.</p>
+<div class="tbl"><table>
+<tr><th>Dimension</th><th>What earns the 2</th></tr>
+<tr><td>Runs</td><td>The loop gate and the generalization gate both banked.</td></tr>
+<tr><td>Generalizes</td><td>All five Stage 1 shapes, not the easy one.</td></tr>
+<tr><td>Tools</td><td>Every description says when to call it and what comes back.</td></tr>
+<tr><td>Guardrail</td><td>Tested, not judged. A forged token is refused.</td></tr>
+<tr><td>Claim</td><td>A number you measured, and a claim sized to it.</td></tr>
+</table></div>
+</div>
+</section>
+<section class="chapter" id="between">
+<span class="pill between">Between</span>
+<h2><strong>Between</strong> sessions</h2>
+<p class="lead">Nothing is required of you. One file lands in your repo, and the next session opens on it, so read it when it arrives.</p>
+<div class="pb">
+<h4>A bot read your build</h4>
+<p>It read your code, not your demo. It ran nothing, and it changed exactly one file: <code>FEEDBACK.md</code>, at the root of your own repo.</p>
+<p>It is written into the pod repo before the next session opens, so it is not in a fresh clone and it is not something you generate. If <code>git pull</code> does not bring it down, ask in your pod thread rather than hunting for it.</p>
+<pre class="cmd"><span class="p">$ </span>git pull
+<span class="p">$ </span>open FEEDBACK.md</pre>
+</div>
+<div class="pb">
+<h4>What is in it</h4>
+<div class="tbl"><table>
+<tr><th>Section</th><th>What is in it</th></tr>
+<tr><td>Priya's note</td><td>Her push, in her words: use your best model.</td></tr>
+<tr><td>Still open</td><td>The same four questions, with what she means by each.</td></tr>
+<tr><td>What the review agent found</td><td>Three to five observations, in your own file and function names.</td></tr>
+<tr><td>Before our 9:00</td><td>Which model should we be on, and how will you prove it.</td></tr>
+</table></div>
+</div>
+<div class="pb">
+<h4>Her four questions</h4>
+<p>None of the four is answered by naming a model. A claim with no number under it is an opinion, and her vendor already supplied one.</p>
+<div class="tbl"><table>
+<tr><th>She asked</th><th>What she means by it</th></tr>
+<tr><td>What it costs</td><td>Per resolved contact, against the $6.90 a human contact costs them.</td></tr>
+<tr><td>When it is wrong</td><td>The first untrue thing it says, and what happens after that.</td></tr>
+<tr><td>Who runs it</td><td>In June, after you have left.</td></tr>
+<tr><td>What you left out</td><td>The scope you cut, and why.</td></tr>
+</table></div>
+</div>
+<div class="pb">
+<h4>First thing, next session</h4>
+<p>Before anything else, on every laptop. What your pod shipped is on the remote, tagged <code>v1</code>. What is on your laptop is a stale guess. Take it, run it once, and the pod is arguing about one agent again.</p>
+<p>It saves your own <code>agent.py</code> into <code>.workshop/mine/</code> first and prints where it went. Nothing you wrote is lost.</p>
+<pre class="cmd"><span class="p">$ </span>python3 pod_sync.py --take-canon
+<span class="p">$ </span>python3 run.py K7PQ2M --trace</pre>
+</div>
+</section>
+<section class="chapter" id="build-3">
+<span class="pill s2">Session two</span>
+<h2>Build 3 · <strong>Build the proof</strong></h2>
+<p class="lead">A claim is only as good as its instrument. You made a claim in the pitch and nothing has graded it. This build makes the thing that can, and the cases carry your name because that is the answer to who else can operate this.</p>
+<div class="walkout"><span class="meta">You walk out with</span><p>an eval suite with a case authored by you, a surface a sponsor can watch, and a result you would read out loud even when it says BLOCKED.</p></div>
+<div class="pb">
+<h4>The four pieces</h4>
+<div class="tbl"><table>
+<tr><th>Piece</th><th>What it is</th></tr>
+<tr><td>The case</td><td>An input and what you expect back. Frozen, so it means the same thing later.</td></tr>
+<tr><td>The run</td><td>Your agent, on that input, unmodified.</td></tr>
+<tr><td>The grader</td><td>The thing that decides pass or fail, and the half everyone forgets is code too.</td></tr>
+<tr><td>The gate</td><td>Whether a failure blocks a release on its own. Hard, or soft.</td></tr>
+</table></div>
+</div>
+<div class="pb">
+<h4>Which grader to reach for</h4>
+<p>Two habits before you ship a judge. Make it quote what it read, and never let a model grade its own output.</p>
+<p>And suspect the eval first. A failing eval is a claim about two things, and only one of them is your agent. Larkspur's week 8 lost a suite to 37 of 48 in a single night, the only change was the rubric, and nine of eleven failures were the grader. Fixed in 40 minutes, agent untouched. It happened on this exercise's own first live run too: read <code>evals/GRADER-BUG.md</code> in your repo.</p>
+<div class="tbl"><table>
+<tr><th>Grader</th><th>Good for</th><th>Charges you</th></tr>
+<tr><td>Exact match</td><td>A PNR, a flight number, a policy row id</td><td>Nothing, and it fails a right answer worded differently</td></tr>
+<tr><td>Rule-based</td><td>Was <code>confirm_rebooking</code> called? Was a hotel promised? Roughly seven in ten production checks live here</td><td>You have to say the rule out loud</td></tr>
+<tr><td>LLM as judge</td><td>Tone, acknowledgement, whether an explanation is honest</td><td>Money, latency, and a grader that can itself be wrong</td></tr>
+</table></div>
+</div>
+<article class="step" id="step-3.1">
+<header><span class="id">3.1</span><h3><strong>Build the proof</strong></h3></header>
+<div class="row building"><span class="k meta">What you are building</span><p>Three surfaces, three audiences. The trace is for you, the chat is for the customer, the panel is for the sponsor. Most teams build the first, demo the second, and never build the third.</p><p>A blocked release can pass this one. Honest proof beats a green dashboard.</p></div>
+<div class="row do"><span class="k meta">Do</span><ol><li>Open the surface. There is nothing to wire: <code>python3 demo/serve.py</code> serves it as shipped, on http://localhost:4390, with chat on the left, the evidence panel on the right, and your own <code>run_agent</code> behind both. It is given on purpose: the proof is the work, not the CSS.<pre class="cmd"><span class="p">$ </span>python3 demo/serve.py</pre></li><li>Copy the worked examples, then make them yours. A pod that ships them untouched does not clear the gate.<pre class="cmd"><span class="p">$ </span>cp evals/cases.example.json evals/cases.json</pre></li><li>Write one case per member, three minimum, each carrying its author's name in the <code>author</code> field. That field is matched against the name banking the gate, so a pod of six cannot ship six cases with one person's judgment in all of them.</li><li>Make two of them hard gates. A hard gate is a case whose failure blocks a release on its own. If everything is soft, nothing is gated.</li><li>Run the suite against your own agent.<pre class="cmd"><span class="p">$ </span>python3 eval_harness.py</pre></li><li>Fill the panel. Pass rate, what blocked, one claim, the caveat. Behind on time, cut the panel: the cases are the proof, the panel only puts them on a screen.</li><li>Then take the gate. It does not require your cases to pass.<pre class="cmd"><span class="p">$ </span>python3 verify.py 3.1</pre></li><li>Bring three things to the share-out. The case you wrote first and the customer shape behind it, how you graded it and the sentence your expectation turns on, and the one your agent failed. Say that third one out loud: it is the most useful minute of the build.</li><li>At the end of the build, the third name on the roster publishes the canon. Everyone else takes it.<pre class="cmd"><span class="p">$ </span>python3 readout.py
+<span class="p">$ </span>python3 pod_sync.py --push-canon</pre></li></ol></div>
+<div class="row done"><span class="k meta">You will know it worked when</span><p>Ten checks, and every label names the file it read. Seven read your cases and your last run: at least 3 cases, at least 2 hard gates, every case says what it expects, one authored by you, the last run was YOUR cases, the run covered at least 3 cases, the panel has numbers. Three read <code>PITCH.md</code>: a line carries a number, the file is more than the shipped template, and the <code>Still broken:</code> line names one thing. Whether your cases passed is not on that list, and never will be. A blocked release passes this gate. Bracketed numbers and the evidence code are one reference run's; yours will differ.</p><pre class="cmd"><span class="p">$ </span>python3 verify.py 3.1</pre><pre class="out"><span class="head">Step 3.1: Build 3 · Build the proof</span>
+
+  <span class="ok">✓</span> at least 3 eval cases (5)
+  <span class="ok">✓</span> at least 2 of them are hard gates (2)
+  <span class="ok">✓</span> every case says what it expects
+  <span class="ok">✓</span> at least one case is authored by you (Alice Example)
+  <span class="ok">✓</span> the last eval_harness run was YOUR cases, not the examples
+  <span class="ok">✓</span> the run covered at least 3 cases (ran 5 of the 5 in cases.json, 5 scored, release BLOCKED)
+  <span class="ok">✓</span> the evidence panel has numbers to show
+  <span class="ok">✓</span> PITCH.md, whole file: some line carries a number (the 'Number:' line is where it belongs)
+  <span class="ok">✓</span> PITCH.md, whole file: more than the shipped template (138 words, floor is 40)
+  <span class="ok">✓</span> PITCH.md: the 'Still broken:' line names one thing that still does not work
+
+<span class="head">All checks passed. Evidence code: 8E5-8BB</span>
+That code is your receipt for step 3.1. Nothing to upload.</pre></div>
+<div class="row ifnot"><span class="k meta">If not</span><div class="tbl"><table><tr><th>You see</th><th>Where to look</th></tr><tr><td>Every case passes</td><td>You wrote them too gently. Ask what you would write if you were trying to find the thing that breaks, then write that one.</td></tr><tr><td>A case fails on behaviour you believe was right</td><td>Suspect the rubric before the agent. Read <code>evals/GRADER-BUG.md</code>, which is that exact failure from Larkspur's own week 8.</td></tr><tr><td>A row reads <code>UNKN</code> and the run says the grader could not read its own judge</td><td>That case ran and was not scored, and it is not charged to your agent. The pass rate is over scored cases only. Run the suite again; if it repeats, the judge prompt for that case is the suspect, not the agent.</td></tr></table></div></div>
+<div class="row claude"><span class="k meta">In Claude Code</span><p>Once you know which customer shape your case is about, before you fight the JSON.</p><pre class="out">Write the eval case I'm about to describe, then argue against it as the grader would:
+every way my expect could pass a bad answer or fail a good one. Ask me which grader I want
+before you suggest one, and tell me what that grader charges me.</pre></div>
+<div class="row ahead"><span class="k meta">If you are ahead</span><p><strong>Agent, or grader?</strong> Take one failing case and decide, in writing, which one it was. If it was the grader, change only <code>expect</code>, bump <code>rubric_version</code> to <code>v3</code>, keep the v2 file beside it, and run it again. A verdict that flips with <code>agent.py</code> untouched is your own week 8.</p><p>Two rubric files, v2 and v3, side by side, and the verdict that flipped between them.</p></div>
+<div class="row next"><span class="k meta">Next</span><p>Build 4. Now something in your repo can read a saving, you can go and make one.</p></div>
+</article>
+</section>
+<section class="chapter" id="build-4">
+<span class="pill s2">Session two</span>
+<h2>Build 4 · <strong>Pull the lever</strong></h2>
+<p class="lead">Proof came first for a reason. You cannot bank a saving you have no way to read. Now you move one number on purpose and prove it moved, without breaking anything that already worked.</p>
+<div class="walkout"><span class="meta">You walk out with</span><p>one declared lever, a before and after pair off your own laptop, and a movement you would put in front of somebody who owns the budget.</p></div>
+<div class="pb">
+<h4>What each lever buys, and what it charges</h4>
+<p>"All three" is a dodge. Which one first, and why that one?</p>
+<div class="tbl"><table>
+<tr><th>Lever</th><th>Buys</th><th>Charges</th></tr>
+<tr><td>Intelligence</td><td>Harder shapes, fewer wrong answers</td><td>Tokens, latency, more to evaluate</td></tr>
+<tr><td>Cost</td><td>A number the sponsor can defend</td><td>A cache you must keep valid, and latency: p50 and p95 both went up about a fifth on the reference run</td></tr>
+<tr><td>Speed</td><td>Abandonment, and the SLA</td><td>A smaller model. A quality bet.</td></tr>
+</table></div>
+</div>
+<div class="pb">
+<h4>Your lane, and where to look</h4>
+<p>The intelligence lane is allowed to be a different model, one tier up or one tier down, as long as you bench the same stage on both sides of the swap.</p>
+<div class="tbl"><table>
+<tr><th>Lane</th><th>Your number</th><th>Where to look</th></tr>
+<tr><td><code>cost</code></td><td>Model $ per contact</td><td>Cache, tokens, the tool wall</td></tr>
+<tr><td><code>speed</code></td><td>p95</td><td>Triage, parallel reads, turns</td></tr>
+<tr><td><code>intelligence</code></td><td>Wire rules on Stage 2</td><td>Five adversarial messages, one tier either way</td></tr>
+</table></div>
+</div>
+<div class="pb">
+<h4>Real measurements, and not one of them a model upgrade</h4>
+<p><strong>$0.14 per resolved contact against $6.90 for a human chat</strong> is the only comparison a board reads, and it flatters. Humans still take 42% of in-scope chats, and all voice. Say the caveat, and the date the prices came from, on the same slide.</p>
+<p>Caching can also cost you more than it saves. Writing to the cache is priced above fresh input, so a prefix that changes on every call pays the premium and never collects. Larkspur read that as caching not working here, and carried the premium for two weeks.</p>
+<p><code>bench.py</code> reports model cost only. Larkspur's loaded cost per resolved contact was about $0.14 against a model cost of $0.087, so roughly 40% of the real number is infrastructure and evals. Report it as model cost, or say loaded and estimated. Do not quietly call it the loaded number.</p>
+<div class="tbl"><table>
+<tr><th>Configuration</th><th>Week</th><th>p95</th><th>Model $/contact</th></tr>
+<tr><td>One mid-tier model, no cache</td><td>2</td><td>9.8s</td><td>$0.173</td></tr>
+<tr><td>plus caching, parallel reads</td><td>5</td><td>6.9s</td><td>$0.102</td></tr>
+<tr><td>plus small-model triage, trimmed output</td><td>7</td><td>4.7s</td><td>$0.087</td></tr>
+</table></div>
+</div>
+<article class="step" id="step-4.1">
+<header><span class="id">4.1</span><h3>Pull the lever, <strong>measure it</strong></h3></header>
+<div class="row building"><span class="k meta">What you are building</span><p>Bench before you tune. The before number cannot be rebuilt after.</p><p>A win that breaks a Stage 1 shape fails, and that is the point of the build.</p></div>
+<div class="row do"><span class="k meta">Do</span><ol><li>Declare your lane in writing, in <code>PITCH.md</code> and in your pod thread. The shipped file carries the line as a menu, <code>Lever: &lt;cost | speed | intelligence&gt;</code>. Replace everything after the colon with the one word you picked, because the gate reads that word and refuses the menu.<pre class="out">Lever: cost</pre></li><li>Every member benches cold on their own laptop, labelled <code>before</code>, before any change lands. A podmate's fix does not carry your before number, and it cannot be rebuilt. Three runs per shape, both sides: at one run per shape an output-token delta under about 15% is noise, and <code>--compare</code> prints it beside your win as if it were real.<pre class="cmd"><span class="p">$ </span>python3 bench.py --label before --stage 1 --runs 3</pre></li><li>Intelligence lane only: bench Stage 2 on both sides of the swap as well. Your metric is the wire-rule count, and that only exists on Stage 2.<pre class="cmd"><span class="p">$ </span>python3 bench.py --label s2-before --stage 2 --runs 3
+<span class="c"># then, after the swap</span>
+<span class="p">$ </span>python3 bench.py --label s2-after --stage 2 --runs 3</pre></li><li>Pull one lever. The one you declared.</li><li>Bench again and diff the two labels. Same stage and same number of runs on both sides, or the comparison is not one.<pre class="cmd"><span class="p">$ </span>python3 bench.py --label after --stage 1 --runs 3
+<span class="p">$ </span>python3 bench.py --compare before after</pre></li><li>Walk the five shapes again before you call it done. A win you did not recheck is a claim you cannot make.<pre class="cmd"><span class="p">$ </span>python3 run.py --all --trace</pre></li><li>Then take the gate.<pre class="cmd"><span class="p">$ </span>python3 verify.py 4.1</pre></li><li>At the end of the build, the fourth name on the roster publishes the canon. The last hand. Everyone else takes it.<pre class="cmd"><span class="p">$ </span>python3 readout.py
+<span class="p">$ </span>python3 pod_sync.py --push-canon</pre></li></ol></div>
+<div class="row done"><span class="k meta">You will know it worked when</span><p>Your declared lane's number moved at least 10% in the right direction, and Stage 1 still resolves 5/5. Ten percent is there so noise does not read as a win. A 70% cost win that breaks a shape fails. The first check reads the <code>Lever:</code> line in <code>PITCH.md</code>. The numbers below are one reference run on the cost lane; yours will differ.</p><pre class="cmd"><span class="p">$ </span>python3 verify.py 4.1</pre><pre class="out"><span class="head">Step 4.1: Build 4 · Pull the lever</span>
+
+  <span class="ok">✓</span> PITCH.md: the 'Lever:' line names one lane (cost)
+  <span class="ok">✓</span> a 'before' bench exists
+  <span class="ok">✓</span> an 'after' bench exists
+  <span class="ok">✓</span> the two runs are comparable
+  <span class="ok">✓</span> stage 1 still resolves 5/5 after your change (100%)
+  <span class="ok">✓</span> cost lane: model_cost_per_contact 0.0559 → 0.0234 (-58%)
+
+<span class="head">All checks passed. Evidence code: 61A-096</span>
+That code is your receipt for step 4.1. Nothing to upload.</pre></div>
+<div class="row ifnot"><span class="k meta">If not</span><div class="tbl"><table><tr><th>You see</th><th>Where to look</th></tr><tr><td>The number went the wrong way</td><td>Read the bench file before you touch the agent again. Cache read and written, tokens, turns. The row that moved is not always the row you aimed at.</td></tr><tr><td>The bench says <code>cache: not used on any turn</code></td><td>Nothing has been marked for reuse, so a stable prefix has nothing to hit. That is not a 0% hit rate; it is no cache at all. What would the API have to be told, about the part of the request that does not change, before it can keep anything between calls?</td></tr><tr><td>Caching reports a 0% hit rate</td><td>Something is being kept and nothing is ever found again. Print what goes out at the very top of every request, two calls in a row, and ask which characters are not identical.</td></tr><tr><td>Cost fell and latency rose</td><td>That is the cost lever's real charge: the reference run paid about a fifth on p50 and p95. Say it in the pitch. A lever that only shows its buys is a claim the client will find the charge on.</td></tr></table></div></div>
+<div class="row claude"><span class="k meta">In Claude Code</span><p>After the before bench, while you are deciding which lever to pull.</p><pre class="out">Read .workshop/bench-before.json and my latest trace, and tell me where the tokens go per
+turn. Ask me which lever I think that points to, and why, before you say yours.
+Do not change agent.py.</pre></div>
+<div class="row ahead"><span class="k meta">If you are ahead</span><p><strong>The second lever.</strong> Leave <code>before</code> and <code>after</code> untouched, they are your banked pair. Pull a second lever, bench it as <code>after2</code>, and compare <code>after</code> against <code>after2</code>. The payoff is not the row that improved. It is the row that got worse, with its percentage. That is the Charges column, on your own build.</p><p>The row that got worse, named with its number, in <code>PITCH.md</code>.</p></div>
+<div class="row next"><span class="k meta">Next</span><p>Pitch the client. Somebody who owns a budget is about to ask you what a year of this costs.</p></div>
+</article>
+</section>
+<section class="chapter" id="pitch">
+<span class="pill s2">Session two</span>
+<h2>Pitch <strong>the client</strong></h2>
+<p class="lead">No neutral audience. Whoever is not pitching is the client, and clients own budgets. You are paired across lanes, so the client opposite you moved a different number and knows exactly where your claim gets thin.</p>
+<div class="pb">
+<h4>How the twenty five minutes run</h4>
+<div class="tbl"><table>
+<tr><th>Phase</th><th>Min</th><th>What happens</th></tr>
+<tr><td>You pitch</td><td>5</td><td>Demo the surface, state the claim, name the caveat</td></tr>
+<tr><td>They are the client</td><td>4</td><td>Two questions, off the four axes. Not four soft ones.</td></tr>
+<tr><td>Swap, they pitch</td><td>5</td><td>Same three beats</td></tr>
+<tr><td>You are the client</td><td>4</td><td>Two questions back</td></tr>
+<tr><td>Everyone writes</td><td>3</td><td>Your three lines, filed as an issue on the repo you just heard</td></tr>
+<tr><td>Regroup</td><td>4</td><td>Back in the main room once your issue is filed</td></tr>
+</table></div>
+</div>
+<div class="pb">
+<h4>Three things go in with you</h4>
+<p>Claim only what your evidence shows. "We did not measure that" beats a guess, and the caveat is scored, so a pod that hides a gap loses more than a pod that owns one.</p>
+<ul><li>One claim. A number, its unit and its denominator, on the one metric your pod declared.</li><li>Two numbers. Before and after, straight off your own two bench files.</li><li>One caveat. What you did not measure, named by you before she finds it.</li></ul>
+</div>
+<div class="pb">
+<h4>Pick a persona, ask two questions</h4>
+<p>Holding a fresh cost or speed number? Draw Marcus. He is the harder room, and that is the point. His bar, in his words: what does a year of this cost, and whose name is on it?</p>
+<p>Your questions are graded too. Four soft ones and the room learns nothing. Ask them the question you would least like asked of your own build.</p>
+<div class="tbl"><table>
+<tr><th>The axis</th><th>Priya · project manager</th><th>Marcus · head of ops</th></tr>
+<tr><td><code>cost</code></td><td>Per resolved contact</td><td>Per year, at our volume</td></tr>
+<tr><td><code>wrong</code></td><td>The first untrue thing it says</td><td>Who is accountable when it is</td></tr>
+<tr><td><code>operate</code></td><td>Who runs it in June</td><td>The day your team leaves</td></tr>
+<tr><td><code>scope</code></td><td>What you left out, and why</td><td>Where the kill switch lives</td></tr>
+</table></div>
+</div>
+<div class="pb">
+<h4>Three lines, filed where the work lives</h4>
+<p>A number you would take to your own client, a claim you would not sign, and a gap. Filed as a signed issue on their repo, where the build lives, rather than in a chat that closes when the session does.</p>
+<p>Then read the one on yours before the close. Every pod leaves with a read on their work that nobody running the room wrote.</p>
+</div>
+</section>
+<section class="chapter" id="close">
+<span class="pill s2">Session two</span>
+<h2>What is <strong>provable now</strong></h2>
+<p class="lead">Be precise about the claim. That precision is the last thing this build teaches, and it is the half that travels.</p>
+<div class="pb">
+<h4>Provable, and not yet</h4>
+<p>That is the honest state of most week-four engagements.</p>
+<div class="tbl"><table>
+<tr><th>Provable</th><th>Not yet</th></tr>
+<tr><td>Three gated eval cases, authored and run</td><td>Accuracy at volume</td></tr>
+<tr><td>Your own before and after on a metric you chose</td><td>Real customer traffic</td></tr>
+<tr><td>A forged confirmation token refused</td><td>Anything at production scale</td></tr>
+</table></div>
+</div>
+<div class="pb">
+<h4>Two sessions, one agent</h4>
+<div class="tbl"><table>
+<tr><th>Session one · done</th><th>Session two · done</th><th>From here · yours</th></tr>
+<tr><td><strong>Build.</strong> The harness, the loop, and tools you wrote yourself.</td><td><strong>Prove.</strong> Eval cases, a grader, and a number that moved.</td><td><strong>Scale.</strong> Nobody in this room does that part for you.</td></tr>
+</table></div>
+</div>
+<div class="pb">
+<h4>The proof pack, before you go</h4>
+<p>The named account is the ask. A repo nobody takes to a customer inside 30 days is a training exercise. Not a segment, not a vertical: a logo, a workflow you understand end to end, and a date on a calendar.</p>
+<p>You keep the repo, the eval cases and the grader. The grader is the half that travels, and it is the cheapest rehearsal available before a real pitch.</p>
+<div class="tbl"><table>
+<tr><th>What you record</th><th>Where it comes from</th></tr>
+<tr><td>The repo URL</td><td>Tagged <code>v1</code> when you shipped it.</td></tr>
+<tr><td>The six <code>PITCH.md</code> lines</td><td>Written at the pitch, sharpened when you pitched the client.</td></tr>
+<tr><td>Your two bench numbers</td><td><code>bench.py</code>, before and after.</td></tr>
+<tr><td>One named account, its use case, and a date inside 30 days</td><td>You. Nobody else can write this line.</td></tr>
+<tr><td>Anything you took past a gate</td><td>The stretch box on your build steps. Not scored.</td></tr>
+</table></div>
+</div>
+</section>
+<section class="chapter appendix" id="appendix-a">
+<span class="pill appx">Appendix</span><h2>A · Working in <strong>one repo</strong></h2>
+<div class="pb">
+<p>The rule, in one sentence. <strong>Nobody commits <code>agent.py</code> mid-build. At the end, the build's committer publishes the canon and everyone else takes it.</strong></p>
+<pre class="cmd"><span class="p">$ </span>python3 pod_sync.py --push-canon   # the committer
+<span class="p">$ </span>python3 pod_sync.py --take-canon   # everyone else</pre>
+</div>
+<div class="pb">
+<p>Everyone builds their own <code>agent.py</code> on their own laptop. Several people editing one file in one repo at the same time produces a merge conflict inside a loop they are all still learning to read, and no breakout has time for that. So the repo only ever holds one version: the one the pod chose.</p>
+<p><code>--take-canon</code> saves your version into <code>.workshop/mine/</code> first and prints the path. Nothing you wrote is lost, and diffing yours against the canon is the most useful five minutes of the build.</p>
+<p><code>PITCH.md</code> and <code>evals/cases.json</code> are the pod's shared record and they are normal commits. The bench pair never leaves your laptop.</p>
+</div>
+<div class="pb">
+<h4>Four hands, in order</h4>
+<div class="tbl"><table>
+<tr><th>Build</th><th>Who publishes the canon</th></tr>
+<tr><td>Build 1</td><td>The repo's creator</td></tr>
+<tr><td>Build 2</td><td>The second name on the roster</td></tr>
+<tr><td>Build 3</td><td>The third name</td></tr>
+<tr><td>Build 4</td><td>The fourth name, the last hand</td></tr>
+</table></div>
+</div>
+<div class="pb">
+<h4>Behind, or something broke</h4>
+<p>The pod repo is the checkpoint. This restores what the pod pushed.</p>
+<pre class="cmd"><span class="p">$ </span>python3 pod_sync.py --take-canon --force</pre>
+</div>
+<div class="pb">
+<h4>What it does not restore</h4>
+<p>If <code>.workshop/</code> is already gone, say so rather than re-benching <code>before</code> against the current agent. That number would be a fiction, and your pod's claim rests on it.</p>
+<div class="tbl"><table>
+<tr><th>Not restored</th><th>What to do</th></tr>
+<tr><td><code>.env</code>, your key</td><td>Yours, and never in the repo. Re-create it from <code>.env.example</code>.</td></tr>
+<tr><td><code>.venv/</code></td><td>Rebuild it with <code>python3 setup.py --fix</code>.</td></tr>
+<tr><td><code>.workshop/</code>, your banked gates and bench numbers</td><td>Not on the remote. Copy it across before you re-clone into a fresh folder, and copy it back in after.</td></tr>
+</table></div>
+</div>
+</section>
+<section class="chapter appendix" id="appendix-b">
+<span class="pill appx">Appendix</span><h2>B · <strong>The five tickets</strong></h2>
+<div class="pb">
+<p>One example of the bar, not the only wording that passes. Two of the five are not what they look like: one should not resolve at all, and one gets an answer this build has no gate for.</p>
+<div class="tbl"><table>
+<tr><th>PNR</th><th>Shape</th><th>What good looks like</th></tr>
+<tr><td><code>K7PQ2M</code></td><td>Clean cancellation</td><td>Holds a seat, then waits for the customer's click</td></tr>
+<tr><td><code>M3XR8T</code></td><td>Delay under threshold</td><td>Refuses the waiver and names the policy row it came from</td></tr>
+<tr><td><code>T9WN4C</code></td><td>Ambiguous missed connection</td><td>Asks a clarifying question before it does anything</td></tr>
+<tr><td><code>G2HL9V</code></td><td>Out of scope, a group of 12</td><td>Escalates. It does not resolve, and that is the pass</td></tr>
+<tr><td><code>R8KD3F</code></td><td>Abuse plus a legal threat</td><td>Comes back calm and helpful. There is no tone gate yet</td></tr>
+</table></div>
+</div>
+</section>
+<section class="chapter appendix" id="appendix-c">
+<span class="pill appx">Appendix</span><h2>C · The <strong>words</strong> of the build</h2>
+<div class="pb">
+<div class="tbl"><table>
+<tr><th>Word</th><th>What it means here</th></tr>
+<tr><td>PNR</td><td>The booking reference, six characters. It is how every tool finds this customer.</td></tr>
+<tr><td>Turn</td><td>One request plus one reply. You resend the transcript, and that IS the memory.</td></tr>
+<tr><td><code>stop_reason</code></td><td>The field that ends a turn or continues it. <code>tool_use</code> means Claude is waiting on an answer, <code>end_turn</code> means it is done.</td></tr>
+<tr><td><code>tool_result</code></td><td>The block you send back with what a tool returned, keyed to the id of the request that asked for it.</td></tr>
+<tr><td>Tool description</td><td>The only thing Claude reads to pick a tool. A briefing, not docs.</td></tr>
+<tr><td>Hard gate</td><td>One failure blocks the release. Never an average.</td></tr>
+<tr><td>Canon</td><td>The one <code>agent.py</code> the pod agreed on, published at the end of a build. Until you take it, your laptop is a guess.</td></tr>
+<tr><td>Probe</td><td>Your pod's one test message for a tool you wrote, three lines in <code>build2_probe.txt</code>: PNR, last name, the customer's message.</td></tr>
+<tr><td>Bench</td><td>One timed run of the agent over a fixed set of tickets, labelled so two runs can be diffed.</td></tr>
+<tr><td>p95</td><td>The response time 95 of every 100 contacts come in under. It is the number an SLA is written against, not the average.</td></tr>
+</table></div>
+</div>
+</section>
+<section class="chapter appendix" id="appendix-d">
+<span class="pill appx">Appendix</span><h2>D · Larkspur's systems <strong>as the agent sees them</strong></h2>
+<div class="pb">
+<p>Every line here is sourced from <code>support/tools.py</code> and <code>data/americas/disruption_policy.json</code>. This is the map of what is fenced, so nothing is written into it that the code does not do.</p>
+</div>
+<div class="pb">
+<h4>Reads</h4>
+<div class="tbl"><table>
+<tr><th>Tool</th><th>What it does</th></tr>
+<tr><td><code>lookup_booking</code></td><td>Takes a PNR and a last name, and refuses if the name is not on that booking. Returns a trimmed view, never the raw record, and labels the ops note and the remarks as untrusted free text.</td></tr>
+<tr><td><code>get_flight_status</code></td><td>Takes a flight number and a date. The one read not fenced to the customer's own booking, so it is the one that can be pointed anywhere.</td></tr>
+<tr><td><code>search_alternatives</code></td><td>Takes the PNR alone, so it can never be pointed at a route the customer did not buy.</td></tr>
+<tr><td><code>check_policy</code></td><td>Re-derives fare family, loyalty tier and whether this is an overnight from the booking on every call, so a model cannot talk its way into an entitlement the data does not support.</td></tr>
+</table></div>
+</div>
+<div class="pb">
+<h4>Writes</h4>
+<div class="tbl"><table>
+<tr><th>Tool</th><th>What it does</th><th>The fence</th></tr>
+<tr><td><code>hold_seat</code></td><td>Puts a seat aside and hands back a hold that expires in 15 minutes.</td><td>Reversible, and it undoes itself if nobody confirms.</td></tr>
+<tr><td><code>issue_voucher</code></td><td>Issues on its own only under the policy threshold: 25 dollars for a meal, 40 for ground, 75 for goodwill.</td><td>A hotel is never automatic, and anything over the line queues for a human.</td></tr>
+<tr><td><code>confirm_rebooking</code></td><td>Reissues the ticket. The irreversible one.</td><td>Only with the customer's own click token. "The customer said yes" in chat is not it.</td></tr>
+<tr><td><code>send_confirmation</code></td><td>Writes the message the customer actually reads.</td><td>The only write with no threshold and no token, so it carries whatever the agent got wrong.</td></tr>
+<tr><td><code>escalate_to_human</code></td><td>Files the case with a written summary for whoever picks it up.</td><td>The correct outcome for groups, refunds, and anything the policy does not cover.</td></tr>
+</table></div>
+</div>
+</section>
+<footer class="chrome"><span class="lockup">Basecamp</span><span class="notice">Prepared for Partner Basecamp participants. Not for reproduction or redistribution as training material. You are free to apply these patterns in your own client work. Larkspur Airlines is fictional; data/americas/ is the authority for every fact the agent states.</span></footer>
+</div></body></html>

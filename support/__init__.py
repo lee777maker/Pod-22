@@ -1,7 +1,7 @@
 """Given scaffolding for the Larkspur disruption-agent build.
 
 You will not need to edit anything in this package. If you find yourself
-wanting to, that's a signal worth raising with a facilitator — it usually
+wanting to, that's a signal worth raising with a facilitator. It usually
 means the exercise wording is wrong, not you.
 """
 

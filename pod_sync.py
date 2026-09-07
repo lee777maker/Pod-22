@@ -1,33 +1,33 @@
 #!/usr/bin/env python3
-"""pod_sync.py — one repo, five to seven people, no merge conflicts.
+"""pod_sync.py: one repo, several people, no merge conflicts.
 
     python3 pod_sync.py --status         # where the pod is, and where you are
     python3 pod_sync.py --push-canon     # you built it: publish it as the canon
     python3 pod_sync.py --take-canon     # everyone else: pick the canon up
 
-The protocol is one sentence. Nobody commits agent.py mid-block. At the end of
-the block, the block's committer runs --push-canon and everybody else runs
+The protocol is one sentence. Nobody commits agent.py mid-build. At the end of
+the build, the block's committer runs --push-canon and everybody else runs
 --take-canon.
 
-That is the whole reason this file exists. Five people editing one agent.py in
-one repo at the same time produces a merge conflict inside a function they are
-all still learning to read, and no breakout has time for that. So during the
-block everyone builds their own agent.py locally, and the repo only ever holds
-one version: the one the pod chose.
+That is the whole reason this file exists. Several people editing one agent.py
+in one repo at the same time produces a merge conflict inside a function they
+are all still learning to read, and no breakout has time for that. So during
+the build everyone builds their own agent.py locally, and the repo only ever
+holds one version: the one the pod chose.
 
 Nothing here throws your work away. --take-canon saves your own agent.py into
 .workshop/mine/ before it touches anything, and prints where it went.
 
-Design rule (same as doctor.py): never ends on a stack trace, every failure
-names the fix. You should never have to read raw git output to know what to do.
+Design rule: never ends on a stack trace, every failure names the fix. You
+should never have to read raw git output to know what to do.
 """
 
 from __future__ import annotations
 
 import argparse
-import glob
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -49,11 +49,13 @@ MINE_DIR = os.path.join(HERE, ".workshop", "mine")
 # them: the readout is published by the block's committer, regenerated, or not
 # at all.
 CANON_FILES = ["agent.py", "readout.html", "readout-trace.json", "PITCH.md",
-               "spec/", "build2_probe.txt"]
+               "evals/cases.json", "build2_probe.txt"]
 
-GATE_NAMES = {1: "Setup", 2: "Tool schemas", 3: "The agentic loop",
-              4: "Prove it generalizes", 5: "Pull your lever",
-              6: "The proof surface", 7: "Build 2: the tools you chose"}
+# The step ids every surface uses: guide, verify.py, decks, hints.
+GATE_NAMES = {"1.2": "Make the loop hold", "1.3": "Make the tools route",
+              "1.4": "All five shapes", "2.1": "Your own tool",
+              "2.2": "The same tool, over MCP", "3.1": "Build the proof",
+              "4.1": "Pull the lever"}
 
 
 # ---------------------------------------------------------------------------
@@ -153,14 +155,18 @@ def load_profile():
         return {"name": None, "banked": {}, "caught_up": [], "banked_from_checkpoint": []}
 
 
+def step_order(step):
+    """Sort '1.2' before '1.10' before '2.1', and never raise on junk."""
+    try:
+        return tuple(int(part) for part in str(step).split("."))
+    except (TypeError, ValueError):
+        return (99,)
+
+
 def banked_steps(profile):
-    steps = []
-    for key in (profile.get("banked") or {}):
-        try:
-            steps.append(int(key))
-        except (TypeError, ValueError):
-            continue
-    return sorted(steps)
+    """The step ids this laptop has banked, e.g. ['1.2', '1.3']."""
+    steps = [str(key) for key in (profile.get("banked") or {}) if str(key).strip()]
+    return sorted(steps, key=step_order)
 
 
 def canon_commits(ref):
@@ -175,24 +181,14 @@ def canon_commits(ref):
 
 
 def gate_of(subject):
-    """`canon: gate 3 by Alice` -> 3."""
+    """`canon: gate 1.2 by Alice` -> '1.2'. Also reads the old bare integers."""
     words = subject.replace(":", " ").split()
     for i, w in enumerate(words):
-        if w == "gate" and i + 1 < len(words) and words[i + 1].isdigit():
-            return int(words[i + 1])
+        if w == "gate" and i + 1 < len(words):
+            candidate = words[i + 1]
+            if re.match(r"^\d+(\.\d+)?$", candidate):
+                return candidate
     return None
-
-
-def handshake_authors(ref):
-    # team/*.md, not team/: whoever created the repo committed the .gitkeep,
-    # and a .gitkeep is not a handshake.
-    out = git_out("log", "--remotes=origin", "--format=%an", "--", "team/*.md")
-    return sorted(set(l for l in out.splitlines() if l.strip()))
-
-
-def ready_receipts(ref):
-    out = git_out("ls-tree", "-r", "--name-only", ref, "--", "ready/")
-    return [p for p in out.splitlines() if p.endswith(".md")]
 
 
 def bench_warning():
@@ -237,7 +233,7 @@ def cmd_status(args):
         top = canon[0]
         gate = gate_of(top["subject"])
         print("  canon     %s, pushed by %s %s"
-              % ("gate %d (%s)" % (gate, GATE_NAMES.get(gate, "?")) if gate else top["subject"],
+              % ("step %s (%s)" % (gate, GATE_NAMES.get(gate, "?")) if gate else top["subject"],
                  top["author"], top["when"]))
     else:
         print("  canon     nothing published yet (no --push-canon has landed)")
@@ -245,19 +241,15 @@ def cmd_status(args):
     profile = load_profile()
     steps = banked_steps(profile)
     if steps:
-        codes = ", ".join("%d:%s" % (s, profile["banked"][str(s)]) for s in steps)
-        print("  banked    gate(s) %s on this laptop  [%s]"
-              % (", ".join(str(s) for s in steps), codes))
+        codes = ", ".join("%s:%s" % (s, profile["banked"][s]) for s in steps)
+        print("  banked    step(s) %s on this laptop  [%s]" % (", ".join(steps), codes))
     else:
-        print("  banked    nothing banked on this laptop yet (python3 verify.py <n>)")
+        print("  banked    nothing banked on this laptop yet (python3 verify.py <step>)")
 
-    hands = handshake_authors(ref)
-    receipts = ready_receipts(ref)
     names = sorted(set(c["author"] for c in canon))
-    print("  pod       %d handshake(s), %d READY receipt(s), %d canon push(es) by %d name(s)"
-          % (len(hands), len(receipts), len(canon), len(names)))
-    if hands:
-        print("            on the roster: %s" % ", ".join(hands))
+    print("  pod       %d canon push(es) by %d name(s)" % (len(canon), len(names)))
+    if names:
+        print("            pushed by: %s" % ", ".join(names))
 
     warn = bench_warning()
     if warn:
@@ -267,7 +259,7 @@ def cmd_status(args):
 
     print("\n" + RULE)
     if behind:
-        print("You are behind. If the block is over:  python3 pod_sync.py --take-canon")
+        print("You are behind. If the build is over:  python3 pod_sync.py --take-canon")
     elif ahead:
         print("You have local commits the pod does not. If you are the block's committer:")
         print("  python3 pod_sync.py --push-canon")
@@ -282,30 +274,34 @@ def cmd_status(args):
 # ---------------------------------------------------------------------------
 
 def resolve_gate(args, profile, ref, prefer="remote"):
-    """Which block are we syncing?
+    """Which build are we syncing?
 
     The flag always wins. After that the two verbs want different answers, and
-    getting this backwards is how a committer gets refused for a gate they
+    getting this backwards is how a committer gets refused for a step they
     never claimed to be pushing:
 
-      --push-canon  is publishing what passed HERE, so the highest gate banked
+      --push-canon  is publishing what passed HERE, so the highest step banked
                     on this laptop is the right guess (prefer="local").
       --take-canon  is picking up what the pod published, so the newest canon
                     on the remote is (prefer="remote").
     """
     if args.gate:
-        return args.gate, "you named it with --gate"
+        return str(args.gate).strip(), "you named it with --gate"
     steps = banked_steps(profile)
     remote_gate = next((g for g in (gate_of(r["subject"]) for r in canon_commits(ref)) if g),
                        None)
-    local = (steps[-1], "the highest gate banked on this laptop") if steps else None
-    remote = ((remote_gate, "the newest canon on the remote is gate %d" % remote_gate)
+    local = (steps[-1], "the highest step banked on this laptop") if steps else None
+    remote = ((remote_gate, "the newest canon on the remote is step %s" % remote_gate)
               if remote_gate else None)
     order = (local, remote) if prefer == "local" else (remote, local)
     for answer in order:
         if answer:
             return answer
     return None, "nothing banked here and no canon on the remote"
+
+
+def gate_label(gate):
+    return "step %s (%s)" % (gate, GATE_NAMES.get(gate, "?"))
 
 
 def push_with_retry(ref, attempts=3):
@@ -351,16 +347,16 @@ def cmd_push_canon(args):
 
     if gate is None:
         return fail("Nothing has passed on this laptop yet, so there is no canon to push.",
-                    "Run the block's gate first:",
-                    "  python3 verify.py <step number>",
+                    "Run the build's gate first:",
+                    "  python3 verify.py <step>",
                     "Then push. The canon is the version that passed, not the newest one.")
     if gate not in banked:
-        return fail("Gate %d has not passed on this laptop (%s)." % (gate, why),
-                    "Banked here: %s" % (", ".join(str(s) for s in banked) or "nothing"),
+        return fail("Step %s has not passed on this laptop (%s)." % (gate, why),
+                    "Banked here: %s" % (", ".join(banked) or "nothing"),
                     "The canon is the version that passed, so run the gate first:",
-                    "  python3 verify.py %d" % gate,
-                    "If you are pushing a different block, name it:",
-                    "  python3 pod_sync.py --push-canon --gate <n>")
+                    "  python3 verify.py %s" % gate,
+                    "If you are pushing a different build, name it:",
+                    "  python3 pod_sync.py --push-canon --gate <step>")
 
     ok, why_not = regenerate_readout()
     if ok:
@@ -371,10 +367,6 @@ def cmd_push_canon(args):
         print("  Fix later with: python3 run.py <PNR> --trace, then python3 readout.py")
 
     present = [p for p in CANON_FILES if os.path.exists(os.path.join(HERE, p))]
-    # Every member's committed evidence rides along too — one file per person,
-    # distinct paths, so this can never conflict.
-    present += sorted(os.path.relpath(p, HERE)
-                      for p in glob.glob(os.path.join(HERE, "evidence", "*.json")))
     if not present:
         return fail("None of the files a canon push publishes exist here yet.",
                     "Expected at least agent.py in %s" % HERE,
@@ -402,7 +394,7 @@ def cmd_push_canon(args):
         return 0
 
     author = git_out("config", "user.name") or "unknown"
-    message = "canon: gate %d by %s" % (gate, author)
+    message = "canon: gate %s by %s" % (gate, author)
     code, out = git("commit", "-m", message, timeout=60)
     if code != 0:
         return fail("git could not make the commit.", last_line(out),
@@ -429,8 +421,7 @@ def cmd_push_canon(args):
                     "Still stuck after two tries? Raise a hand. Nothing is lost: your",
                     "commit is here and the pod can pull it from your screen if it has to.")
 
-    print("\n  Published as the pod's canon: gate %d (%s)"
-          % (gate, GATE_NAMES.get(gate, "?")))
+    print("\n  Published as the pod's canon: %s" % gate_label(gate))
     for path in present:
         print("    %s" % path)
     print("\n" + RULE)
@@ -451,7 +442,7 @@ def save_my_agent(gate):
     if not os.path.exists(src):
         return None
     os.makedirs(MINE_DIR, exist_ok=True)
-    block = ("gate%d" % gate) if gate else "block-unknown"
+    block = ("step%s" % str(gate).replace(".", "-")) if gate else "step-unknown"
     stamp = time.strftime("%Y%m%d-%H%M%S")
     path = os.path.join(MINE_DIR, "agent-%s-%s.py" % (block, stamp))
     n = 2
@@ -508,7 +499,7 @@ def clear_collisions(ref):
     """Move-aside pass with the one line of narration it deserves."""
     moved = move_aside(colliding_untracked(ref))
     for rel, dest in moved:
-        print("  %s was here but never committed, and the canon carries it — moved to %s"
+        print("  %s was here but never committed, and the canon carries it. Moved to %s"
               % (rel, dest))
     return moved
 
@@ -546,13 +537,13 @@ def cmd_take_canon(args):
     # the canon more than it needs one person's gate, and refusing here strands
     # whoever ran out of time on a file the next block does not start from.
     if gate is not None and gate not in banked and not args.force:
-        print("\n  Heads up: the canon carries gate %d, which you have not banked "
-              "(banked here: %s)." % (gate, ", ".join(str(s) for s in banked) or "nothing"))
-        print("  Taking it anyway. Your file is saved at %s, and the block you missed is"
+        print("\n  Heads up: the canon carries step %s, which you have not banked "
+              "(banked here: %s)." % (gate, ", ".join(banked) or "nothing"))
+        print("  Taking it anyway. Your file is saved at %s, and the step you missed is"
               % (os.path.relpath(saved, HERE) if saved else "nowhere: there was none"))
-        print("  still worth finishing on your own copy: python3 verify.py %d" % gate)
+        print("  still worth finishing on your own copy: python3 verify.py %s" % gate)
     if gate is None:
-        print("  which block this is could not be worked out (%s), so no gate check" % why)
+        print("  which build this is could not be worked out (%s), so no gate check" % why)
 
     # Before anything moves: untracked files the canon tracks. Otherwise the
     # pull below refuses over readout.html and the only advice left is a
@@ -618,7 +609,7 @@ def cmd_take_canon(args):
               % os.path.relpath(saved, HERE))
         print("    diff %s agent.py" % os.path.relpath(saved, HERE))
     print(RULE)
-    print("Next block starts from this file, on every laptop in the pod.")
+    print("The next build starts from this file, on every laptop in the pod.")
     print(RULE)
     return 0
 
@@ -627,18 +618,19 @@ def cmd_take_canon(args):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Keep one repo in sync across a pod of five to seven people.")
+        description="Keep one repo in sync across a pod.")
     parser.add_argument("--status", action="store_true",
                         help="where the pod is, and where you are")
     parser.add_argument("--push-canon", action="store_true",
                         help="publish your version as the pod's canon (one person per block)")
     parser.add_argument("--take-canon", action="store_true",
                         help="pick up the pod's canon (everyone else)")
-    parser.add_argument("--gate", type=int, default=None,
-                        help="which verify.py gate this block is (default: worked out for you)")
+    parser.add_argument("--gate", default=None,
+                        help="which verify.py step this build is, e.g. 1.4 "
+                             "(default: worked out for you)")
     parser.add_argument("--force", action="store_true",
-                        help="with --take-canon: you already know your gate has not passed "
-                             "— skip the heads-up (taking it is no longer refused)")
+                        help="with --take-canon: you already know your gate has not passed. "
+                             "Skip the heads-up (taking it is no longer refused)")
     args = parser.parse_args()
 
     verbs = [args.status, args.push_canon, args.take_canon]

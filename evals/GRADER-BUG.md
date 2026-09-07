@@ -65,4 +65,4 @@ nights cannot decide a release.
 
 Worth knowing: the tone gate failed on the same run and that one was real. You
 will have both kinds by the end of the block, and telling them apart is the
-skill. Label each failure — agent, or grader? — before you fix anything.
+skill. Label each failure (agent, or grader?) before you fix anything.

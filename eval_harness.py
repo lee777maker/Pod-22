@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""eval_harness.py — run your eval cases against your agent. GIVEN.
+"""eval_harness.py: run your eval cases against your agent. GIVEN.
 
     python3 eval_harness.py                  # run evals/cases.json
     python3 eval_harness.py --example        # run the 5 given examples instead
@@ -17,17 +17,26 @@ The contract is Larkspur's own, from the engagement (case study, beat 6):
     UNKNOWN counts as FAIL and queues for the human panel
     one FAIL in a hard-gate suite blocks the release candidate
 
+One thing is NOT in that contract, and this harness holds the line on it: a
+judge that a grader cannot read is a grader failure, not an agent failure. When
+the judge's reply does not parse as JSON, the judge is asked once more for JSON
+only. If that reply does not parse either, the case is recorded as UNKNOWN,
+printed as such, left out of the pass rate on both sides, and never counted as
+a FAIL against the agent. A verdict of UNKNOWN that the judge itself chose (the
+transcript was ambiguous) is a different thing and still counts as a failure,
+exactly as the contract above says.
+
 That last line is the whole point. A release does not ship on an average. It
 ships when no hard gate failed.
 
 Three grader types, and a case may carry more than one. ALL of a case's graders
 must pass for the case to pass:
 
-    rules    — deterministic, on the wire. must_call / must_not_call.
+    rules    : deterministic, on the wire. must_call / must_not_call.
                Free, instant, and the right grader for an irreversible action.
-    lexicon  — deterministic, on the text. must_contain / must_not_contain.
+    lexicon  : deterministic, on the text. must_contain / must_not_contain.
                Cheap. Brittle if you use it for anything subtle.
-    judge    — a model call against the case's `expect` prose. It is shown the
+    judge    : a model call against the case's `expect` prose. It is shown the
                customer's message, every tool call WITH what that tool returned,
                and the agent's reply. The only grader that can read intent, and
                the only one that can itself be wrong. Version your rubric.
@@ -162,7 +171,20 @@ def tool_evidence(transcript, cap: int = EVIDENCE_CHAR_CAP) -> str:
     return "\n".join(lines)
 
 
+JUDGE_JSON_NUDGE = (
+    "\n\nYour previous reply could not be read as JSON. Send the JSON object and "
+    "nothing else: no sentence before it, no sentence after it, no code fence."
+)
+
+
 def grade_judge(spec, transcript, case, client) -> dict:
+    """One judge call, and one retry if the reply will not parse.
+
+    `unreadable` on the returned dict is the flag the rest of this file keys
+    off: it says the grader could not read its own judge, which is a grader
+    defect. A judge that answered and chose UNKNOWN is not unreadable, and it
+    still counts as a failure under the contract in the module docstring.
+    """
     prompt = (
         "EXPECTATION\n%s\n\n"
         "WHAT THE CUSTOMER SAID\n%s\n\n"
@@ -174,25 +196,42 @@ def grade_judge(spec, transcript, case, client) -> dict:
            tool_evidence(transcript),
            transcript["reply"] or "(empty reply)")
     )
-    try:
-        response = client.messages.create(
-            model=JUDGE_MODEL, max_tokens=1500, system=JUDGE_SYSTEM,
-            output_config={"format": {"type": "json_schema", "schema": VERDICT_SCHEMA}},
-            messages=[{"role": "user", "content": prompt}],
-        )
-    except Exception as exc:  # noqa: BLE001 — a judge that errors is UNKNOWN, not PASS
-        return {"grader": "judge", "verdict": "UNKNOWN", "evidence": [],
-                "why": "judge call failed: %s: %s" % (type(exc).__name__, exc)}
+    unparsed = ""
+    for attempt in (1, 2):
+        ask = prompt if attempt == 1 else prompt + JUDGE_JSON_NUDGE
+        try:
+            response = client.messages.create(
+                model=JUDGE_MODEL, max_tokens=1500, system=JUDGE_SYSTEM,
+                output_config={"format": {"type": "json_schema", "schema": VERDICT_SCHEMA}},
+                messages=[{"role": "user", "content": ask}],
+            )
+        except Exception as exc:  # noqa: BLE001: a judge that errors is UNKNOWN, not PASS
+            # A call that never returned is left on the contract's own terms:
+            # UNKNOWN, counted as a failure, with the exception named so a
+            # facilitator can tell a rate limit from a bad model id.
+            return {"grader": "judge", "verdict": "UNKNOWN", "evidence": [],
+                    "why": "judge call failed: %s: %s" % (type(exc).__name__, exc)}
 
-    text = "".join(b.text for b in response.content if getattr(b, "type", None) == "text")
-    try:
-        payload = json.loads(text)
-    except json.JSONDecodeError:
-        return {"grader": "judge", "verdict": "UNKNOWN", "evidence": [],
-                "why": "judge did not return parseable JSON"}
-    payload["grader"] = "judge"
-    payload.setdefault("verdict", "UNKNOWN")
-    return payload
+        text = "".join(b.text for b in response.content
+                       if getattr(b, "type", None) == "text")
+        try:
+            payload = json.loads(text)
+        except json.JSONDecodeError:
+            unparsed = text
+            continue
+        payload["grader"] = "judge"
+        payload.setdefault("verdict", "UNKNOWN")
+        if attempt == 2:
+            payload["why"] = ("%s  (the judge was asked a second time for JSON only)"
+                              % (payload.get("why") or "")).strip()
+        return payload
+
+    head = " ".join((unparsed or "").split())[:120] or "(empty reply)"
+    return {"grader": "judge", "verdict": "UNKNOWN", "unreadable": True,
+            "evidence": ["what came back instead of JSON: %s" % head],
+            "why": "the judge's reply did not parse as JSON, and did not parse after "
+                   "one retry asking for JSON only. That is this grader failing to "
+                   "read its own judge, so this case is not scored either way"}
 
 
 # ---------------------------------------------------------------------------
@@ -241,36 +280,60 @@ def grade_case(case, transcript, client) -> dict:
             results.append({"grader": kind or "?", "verdict": "UNKNOWN", "evidence": [],
                             "why": "unknown grader type %r" % kind})
 
-    # UNKNOWN counts as FAIL, and every grader must pass.
-    passed = all(r["verdict"] == "PASS" for r in results)
+    # The agent raising is the agent's own failure, and it outranks everything
+    # else: there is no transcript worth grading.
     if transcript["error"]:
-        passed = False
         results.append({"grader": "run", "verdict": "FAIL", "evidence": [],
                         "why": "the agent raised: %s" % transcript["error"]})
-    return {"passed": passed, "graders": results}
+        return {"status": "FAIL", "passed": False, "graders": results}
+
+    # A grader that could not read its own judge does not get to call this
+    # case. UNKNOWN, out of the pass rate on both sides, and never a FAIL
+    # charged to the agent.
+    if any(r.get("unreadable") for r in results):
+        return {"status": "UNKNOWN", "passed": False, "graders": results}
+
+    # UNKNOWN counts as FAIL, and every grader must pass.
+    passed = all(r["verdict"] == "PASS" for r in results)
+    return {"status": "PASS" if passed else "FAIL", "passed": passed, "graders": results}
 
 
 def gate_report(cases, results) -> dict:
+    """`cases` is how many RAN, including the ones whose grader could not be
+    read. Those land in `unknown` and are out of `scored`, which is the pass
+    rate's denominator on both sides."""
     suites = {}
     for case, res in zip(cases, results):
         s = suites.setdefault(case.get("suite", "unsuited"),
-                              {"passed": 0, "failed": 0, "hard_gate": False, "failures": []})
+                              {"passed": 0, "failed": 0, "unknown": 0,
+                               "hard_gate": False, "failures": [], "unreadable": []})
         s["hard_gate"] = s["hard_gate"] or bool(case.get("hard_gate"))
-        if res["passed"]:
+        status = res.get("status") or ("PASS" if res.get("passed") else "FAIL")
+        if status == "UNKNOWN":
+            s["unknown"] += 1
+            s["unreadable"].append(case["id"])
+        elif status == "PASS":
             s["passed"] += 1
         else:
             s["failed"] += 1
             s["failures"].append(case["id"])
 
+    # A hard gate blocks on a FAIL. It does not block on a case nobody could
+    # grade: that case is unresolved, which is said out loud instead.
     blocking = [name for name, s in suites.items() if s["hard_gate"] and s["failed"]]
-    total = len(results)
-    passed = sum(1 for r in results if r["passed"])
+    statuses = [r.get("status") or ("PASS" if r.get("passed") else "FAIL") for r in results]
+    unknown_ids = [c["id"] for c, st in zip(cases, statuses) if st == "UNKNOWN"]
+    scored = len(results) - len(unknown_ids)
+    passed = sum(1 for st in statuses if st == "PASS")
     return {
         "rubric_version": RUBRIC_VERSION,
         "judge_model": JUDGE_MODEL,
-        "cases": total,
+        "cases": len(results),
+        "scored": scored,
+        "unknown": len(unknown_ids),
+        "unknown_ids": unknown_ids,
         "passed": passed,
-        "pass_rate": round(100.0 * passed / (total or 1), 1),
+        "pass_rate": round(100.0 * passed / (scored or 1), 1),
         "suites": suites,
         "blocking_suites": blocking,
         "release": "BLOCKED" if blocking else "CLEAR",
@@ -281,33 +344,50 @@ def render(cases, results, report) -> str:
     L = ["", "─" * 74, "EVALS   rubric %s   judge %s" % (report["rubric_version"], report["judge_model"]),
          "─" * 74]
     for case, res in zip(cases, results):
-        mark = "PASS" if res["passed"] else "FAIL"
+        status = res.get("status") or ("PASS" if res.get("passed") else "FAIL")
+        mark = {"PASS": "PASS", "FAIL": "FAIL", "UNKNOWN": "UNKN"}[status]
         gate = " [hard gate]" if case.get("hard_gate") else ""
         L.append("  %-4s %-14s %-13s %s%s" % (mark, case["id"], case.get("suite", "-"),
                                                case.get("shape", ""), gate))
-        if not res["passed"]:
+        if status != "PASS":
             for g in res["graders"]:
                 if g["verdict"] != "PASS":
                     L.append("         %s → %s: %s" % (g["grader"], g["verdict"], g["why"]))
                     for quote in (g.get("evidence") or [])[:2]:
                         L.append("           \"%s\"" % str(quote)[:96])
-    L += ["─" * 74,
-          "  %d/%d cases passed  (%.0f%%)" % (report["passed"], report["cases"], report["pass_rate"])]
+    L += ["─" * 74]
+    if report.get("unknown"):
+        L.append("  THE GRADER COULD NOT READ ITS OWN JUDGE on %d case(s): %s"
+                 % (report["unknown"], ", ".join(report["unknown_ids"])))
+        L.append("  Marked UNKN, left out of the pass rate on both sides, and not counted")
+        L.append("  against your agent. Re-run those cases. If it keeps happening, the")
+        L.append("  suspect is the rubric and the judge, not the build: evals/GRADER-BUG.md.")
+        L.append("")
+    L.append("  %d/%d scored cases passed  (%.0f%%)%s"
+             % (report["passed"], report.get("scored", report["cases"]), report["pass_rate"],
+                "" if not report.get("unknown")
+                else ", %d not scored" % report["unknown"]))
     for name, s in sorted(report["suites"].items()):
         flag = "  HARD GATE" if s["hard_gate"] else ""
-        L.append("  %-16s %d passed  %d failed%s" % (name, s["passed"], s["failed"], flag))
+        unk = "  %d not scored" % s["unknown"] if s.get("unknown") else ""
+        L.append("  %-16s %d passed  %d failed%s%s"
+                 % (name, s["passed"], s["failed"], unk, flag))
     L.append("")
     if report["blocking_suites"]:
         L.append("  RELEASE BLOCKED by: %s" % ", ".join(report["blocking_suites"]))
         L.append("  One failure in a hard-gate suite blocks a release. Not an average.")
+    elif report.get("unknown"):
+        L.append("  RELEASE CLEAR: no hard gate failed. %d case(s) are still unresolved,"
+                 % report["unknown"])
+        L.append("  because the grader could not read its own judge on them.")
     else:
-        L.append("  RELEASE CLEAR — no hard gate failed.")
+        L.append("  RELEASE CLEAR: no hard gate failed.")
     L += ["─" * 74, ""]
     return "\n".join(L)
 
 
 def _shown(path: str) -> str:
-    """Relative inside the exercise, as given anywhere else — `--cases` can point
+    """Relative inside the exercise, as given anywhere else. `--cases` can point
     at another pod's clone, and eleven `../` are not a helpful error message."""
     rel = os.path.relpath(path, HERE)
     return path if rel.startswith("..") else rel
@@ -318,7 +398,7 @@ def main() -> int:
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--example", action="store_true", help="run the given examples")
     ap.add_argument("--cases", metavar="PATH",
-                    help="run a different case file — Build 3's stretch ('Agent, or grader?': "
+                    help="run a different case file: Build 3's stretch ('Agent, or grader?': "
                          "run the same agent against the v1 and the v2 rubric and see which "
                          "one moved) needs this")
     ap.add_argument("--case", help="run one case by id")
@@ -364,8 +444,11 @@ def main() -> int:
         result = grade_case(case, transcript, client)
         result["transcript"] = transcript
         results.append(result)
-        sys.stdout.write("%s  (%.1fs)\n" % ("PASS" if result["passed"] else "FAIL",
-                                             transcript["wall"]))
+        sys.stdout.write("%s  (%.1fs)\n"
+                         % ({"PASS": "PASS", "FAIL": "FAIL",
+                             "UNKNOWN": "UNKN  the grader could not read its own judge"}[
+                                result.get("status", "FAIL")],
+                            transcript["wall"]))
 
     report = gate_report(cases, results)
     print(render(cases, results, report))

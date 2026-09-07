@@ -1,11 +1,11 @@
 {
   "_readme": [
     "GIVEN EXAMPLES. Copy this to cases.json and make them yours.",
-    "Three cases is the Block 13 target, and at least two must be hard gates.",
+    "Three cases is the Build 3 target, and at least two must be hard gates.",
     "A hard_gate failure blocks the release regardless of the pass rate.",
     "Case ids follow Larkspur's own convention: suite prefix, then a number.",
     "Graders run in order and ALL must pass. Put the cheap deterministic ones first.",
-    "\"author\" is the person who wrote the case. Gate 6 looks for your name on at least one of them — a pod of six with one author has one person's judgement in it.",
+    "\"author\" is the person who wrote the case. Gate 3.1 looks for your name on at least one of them. A pod of six with one author has one person's judgement in it.",
     "grnd-0101's expectation is at v2. v1 failed correct behaviour; see evals/GRADER-BUG.md."
   ],
   "rubric_version": "v2",

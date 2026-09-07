@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
-"""run.py — drive your agent and watch what it does.
+"""run.py: drive your agent and watch what it does.
 
-    python3 run.py K7PQ2M                # the plain tool loop (Step 3)
+    python3 run.py K7PQ2M                # the plain tool loop (step 1.2)
     python3 run.py K7PQ2M --trace        # same, with the wire trace
-    python3 run.py --show-tools          # Step 2 — what Claude sees about your tools
-    python3 run.py --all --trace         # every Stage 1 PNR (Step 4)
+    python3 run.py --show-tools          # step 1.3: what Claude sees about your tools
+    python3 run.py --all --trace         # every Stage 1 shape (step 1.4)
 
 --trace prints the wire: every API turn, the parameters you sent, the blocks
 that came back, the tools Claude picked, and what it cost. Read it. The trace
 is the lesson; the answer is just the by-product.
 
-Every run also writes the trace to .workshop/last_trace.json — with or without
+Every run also writes the trace to .workshop/last_trace.json, with or without
 --trace, and under --all it is the LAST of the five that survives. That file is
 what `python3 readout.py` turns into the pod's one-page readout, so a run you
 never made is a readout you cannot render.
@@ -34,7 +34,7 @@ sys.path.insert(0, HERE)
 import agent  # noqa: E402
 from support import DEFAULT_LAST_NAME, DEFAULT_PNR, STAGE1_TASKS  # noqa: E402
 
-DEFAULT_MESSAGE = "My flight was disrupted — can you help me figure out what happens next?"
+DEFAULT_MESSAGE = "My flight was disrupted. Can you help me figure out what happens next?"
 
 
 def _last_name_for(pnr: str):
@@ -46,24 +46,46 @@ def _last_name_for(pnr: str):
 
 def run_one(pnr: str, last_name: str, message: str, trace: bool, shape: str = "") -> dict:
     """Runs one conversation and returns the row --all aggregates. Returns None
-    only when the agent raised NotImplementedError, which is the unbuilt state,
-    not a measurement."""
+    when the agent raised NotImplementedError, which is the unbuilt state and
+    not a measurement, and None when the run raised anything else. The run
+    broke, so there is no row to aggregate, but the trace up to the break is
+    still printed because that is where the answer is."""
     print(f"\n=== {pnr} ({last_name}) ===")
+    result, failure = "", None
     try:
         result = agent.run_agent(pnr, last_name, message)
     except NotImplementedError as exc:
         print(f"\n[--] {exc}\n     That's the exercise, not a bug. Build it, then re-run.")
         return None
+    except Exception as exc:  # noqa: BLE001
+        # A run that raised is still a run that happened, and the tracer already
+        # recorded the turn that broke. One line here, then straight on to the
+        # trace: the message the API sent back is a statement about the
+        # conversation this agent assembled, and the trace is where you read it.
+        detail = str(exc)
+        if len(detail) > 200:
+            detail = detail[:200] + "…"
+        failure = f"{type(exc).__name__}: {detail}"
+        print(f"\n[!!] {failure}")
 
     tracer = agent.LAST.tracer
-    if result:
+    if failure is not None:
+        print(
+            "\n  The run stopped on that instead of answering. The trace below ends on the\n"
+            "  turn that broke, marked ERROR, and the turns before it are the ones that\n"
+            "  set it up. Read the error as a statement about the conversation that went\n"
+            "  out, not about your Python."
+        )
+    elif result:
         print(f"\n{result}")
     else:
         print(
             "\n(nothing)\n\n"
-            "  Claude didn't send any text. Read the trace below: if the last turn says\n"
-            "  stop_reason=tool_use, it asked for a tool and the conversation ended before\n"
-            "  anyone answered. That's the thing you're fixing."
+            "  Claude didn't send any text. Read the LAST turn in the trace below.\n"
+            "  If it says stop_reason=tool_use, Claude asked for a tool and the\n"
+            "  conversation ended before anyone answered it. If it says end_turn, the\n"
+            "  conversation did finish, properly, with text, so the question is which\n"
+            "  response's text this function handed back."
         )
 
     if tracer is None:
@@ -79,6 +101,12 @@ def run_one(pnr: str, last_name: str, message: str, trace: bool, shape: str = ""
 
     s = tracer.summary()
     where = os.path.relpath(saved, HERE) if saved else f"not saved ({save_error})"
+    if failure is not None:
+        # The wire is the whole point of a broken run, so it prints with or
+        # without --trace. Nothing below this is a measurement worth keeping.
+        print("\n" + tracer.render())
+        print(f"\n  trace → {where}   (python3 readout.py renders this one)")
+        return None
     if not trace:
         print(
             f"\n  [{s['turns']} turns · {s['tool_calls']} tool calls · "
@@ -164,20 +192,44 @@ def run_all(message: str, trace: bool) -> None:
 def show_tools() -> None:
     given = agent.build_tools()
     extra = list(getattr(agent, "EXTRA_TOOLS", []) or [])
+    # tool_list() is the list run_agent actually sends, so this print-out cannot
+    # drift from the wire. It only reaches the MCP server if the agent's own
+    # seam reaches it, which is why nothing here starts a server on day one.
+    assemble = getattr(agent, "tool_list", None)
+    offered = list(assemble() if callable(assemble) else given + extra)
+    # Names that arrived over the wire. Empty until the MCP seam is wired.
+    over_mcp = {t["name"] for t in (getattr(agent, "MCP_TOOLS", []) or [])}
+    extra_names = {t["name"] for t in extra}
     print("\nWHAT CLAUDE ACTUALLY RECEIVES ABOUT YOUR TOOLS")
     print("=" * 66)
-    for t in given + extra:
+    for t in offered:
         desc = t.get("description", "")
-        mine = " + yours" if t in extra else ""
+        if t["name"] in over_mcp:
+            mine = "  via mcp"
+        elif t["name"] in extra_names:
+            mine = " + yours"
+        else:
+            mine = ""
         flag = f"  <-- {len(desc)} characters" if len(desc) < 40 else ""
         print(f"\n{t['name']}{mine}{flag}")
         print(f"  {desc!r}")
     print("\n" + "=" * 66)
+    n_mcp = sum(1 for t in offered if t["name"] in over_mcp)
+    n_extra = sum(1 for t in offered if t["name"] in extra_names)
+    added = []
+    if n_extra:
+        added.append("%d of yours" % n_extra)
+    if n_mcp:
+        added.append("%d over MCP" % n_mcp)
     print("%d tool(s) offered on every call: the given nine%s."
-          % (len(given) + len(extra),
-             " plus %d of yours" % len(extra) if extra else ", none of yours yet"))
+          % (len(offered),
+             " plus " + " and ".join(added) if added else ", none of yours yet"))
+    if n_mcp:
+        print("%d of those are served by support/mcp_server.py, a separate program.\n"
+              "Claude cannot tell. Same name, same description, same tokens."
+              % n_mcp)
     print("Read that back and ask: could you do this job from that briefing?\n"
-          "Write the answer in your spec/<your-name>.md first, then put it in\n"
+          "Say the answer out loud first, in your own words, then put it in\n"
           "build_tools() (or EXTRA_TOOLS, for the ones you added).")
 
 
@@ -196,7 +248,7 @@ def main() -> int:
 
     if args.offline:
         print("There is no offline mode in this pack. No network means a raised hand")
-        print("and a podmate's screen — flag it to a facilitator.")
+        print("and a podmate's screen. Flag it to a facilitator.")
         return 1
 
     if args.show_tools:

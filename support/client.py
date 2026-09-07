@@ -1,24 +1,24 @@
-"""Connecting to Claude — one function, several credential paths, one failure mode.
+"""Connecting to Claude: one function, several credential paths, one failure mode.
 
 This file is GIVEN. It exists so that "it doesn't work" is never ambiguous.
 
 YOU DO NOT NECESSARILY NEED AN API KEY. The SDK resolves credentials in this
 order, first match wins:
 
-  1. LARKSPUR_OFFLINE=1         the offline simulator — NOT BUILT in this pack.
+  1. LARKSPUR_OFFLINE=1         the offline simulator: NOT BUILT in this pack.
                                 The flag is wired up so it fails with a sentence
                                 instead of a stack trace; it is not a way to
                                 work without a credential.
   2. ANTHROPIC_API_KEY          a key, from your environment or a local .env
   3. ANTHROPIC_AUTH_TOKEN       a bearer token
-  4. an OAuth profile           from `ant auth login` — your normal Claude login,
+  4. an OAuth profile           from `ant auth login`, your normal Claude login,
                                 stored in ~/.config/anthropic/. No key anywhere.
   5. Workload Identity Federation env vars
   6. AWS_BEARER_TOKEN_BEDROCK   Amazon Bedrock (+ AWS_REGION)
 
 So this module deliberately does NOT pre-judge whether you have a credential.
 An unset ANTHROPIC_API_KEY does not mean you have none. It builds a client and
-lets the first real call be the verdict — that's the only check that can't be
+lets the first real call be the verdict. That's the only check that can't be
 wrong.
 
 THE TRAP, since it will cost someone twenty minutes: a stale exported
@@ -37,7 +37,7 @@ from typing import Optional, Tuple
 
 _DOTENV_LOADED = False
 
-# The exercise root — support/client.py's parent's parent. The default .env is
+# The exercise root: support/client.py's parent's parent. The default .env is
 # resolved against THIS, not the current working directory, so `python3
 # some/where/run.py` from a different folder still finds the pod's key file.
 _EXERCISE_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -45,7 +45,7 @@ DEFAULT_DOTENV = os.path.join(_EXERCISE_ROOT, ".env")
 
 
 def load_dotenv(path: Optional[str] = None) -> None:
-    """Minimal .env reader — deliberately not a dependency.
+    """Minimal .env reader: deliberately not a dependency.
 
     python-dotenv is one more thing to install and one more thing to fail on a
     locked-down laptop. This handles the 99% case: KEY=value, one per line.
@@ -94,7 +94,7 @@ def oauth_profile() -> Optional[str]:
 def credential_status() -> Tuple[str, str]:
     """Return (mode, detail) without exposing the secret itself.
 
-    Never returns "none" — see the module docstring. The worst case is
+    Never returns "none". See the module docstring. The worst case is
     "unknown", meaning nothing was detected here and the live call decides.
     """
     load_dotenv()
@@ -103,7 +103,7 @@ def credential_status() -> Tuple[str, str]:
 
     if "ANTHROPIC_API_KEY" in os.environ and not os.environ["ANTHROPIC_API_KEY"].strip():
         return "empty-key", (
-            "ANTHROPIC_API_KEY is set but empty — it outranks every other credential "
+            "ANTHROPIC_API_KEY is set but empty. It outranks every other credential "
             "and fails every request. Unset it: unset ANTHROPIC_API_KEY"
         )
 
@@ -118,7 +118,7 @@ def credential_status() -> Tuple[str, str]:
 
     profile = oauth_profile()
     if profile:
-        return "profile", "signed in via `ant auth login` (profile: %s) — no API key needed" % profile
+        return "profile", "signed in via `ant auth login` (profile: %s), no API key needed" % profile
 
     if os.environ.get("AWS_BEARER_TOKEN_BEDROCK"):
         region = os.environ.get("AWS_REGION")
@@ -126,7 +126,7 @@ def credential_status() -> Tuple[str, str]:
             return "bedrock", "Bedrock token found but AWS_REGION is not set"
         return "bedrock", "Bedrock in %s" % region
 
-    return "unknown", "nothing detected here — the live call below is the real check"
+    return "unknown", "nothing detected here. The live call below is the real check"
 
 
 class MissingCredential(RuntimeError):
@@ -155,7 +155,7 @@ def get_client(offline: Optional[bool] = None):
     except ImportError as exc:  # pragma: no cover
         raise MissingCredential(
             "The anthropic package isn't installed in this Python.\n"
-            "  Fix: python3 doctor.py --fix"
+            "  Fix: python3 setup.py --fix"
         ) from exc
 
     if mode == "bedrock":
@@ -167,7 +167,7 @@ def get_client(offline: Optional[bool] = None):
         from anthropic import AnthropicBedrock
         return AnthropicBedrock(aws_region=os.environ["AWS_REGION"])
 
-    # Everything else — including "unknown". A bare client resolves an OAuth
+    # Everything else, including "unknown". A bare client resolves an OAuth
     # profile, a bearer token, or federated credentials on its own; if there is
     # genuinely nothing, the request fails with an auth error we can explain.
     return anthropic.Anthropic()

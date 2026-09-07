@@ -3,7 +3,7 @@ Larkspur Airlines mock backend.
 
 Stands in for the three live systems Larkspur's real agent would talk to:
 OpsFeed (flight status), Altura (bookings + availability search) and CareDesk
-policy. Nothing here calls a network — every function reads one of the files
+policy. Nothing here calls a network. Every function reads one of the files
 in ../data/americas/ so a room full of laptops gets identical, repeatable
 answers. `tools.py` wraps these functions in the shape Claude's tool-use API
 expects; this file owns the data and the policy-resolution math.
@@ -16,6 +16,7 @@ resolution algorithm fails loudly instead of quietly teaching the wrong thing.
 
 import csv
 import json
+import re
 import secrets
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
@@ -24,12 +25,18 @@ from pathlib import Path
 DATA_DIR = Path(__file__).resolve().parent.parent / "data" / "americas"
 
 # ---------------------------------------------------------------------------
-# Fixture clock — every "now" in this pack is this one frozen moment: 68
+# Fixture clock: every "now" in this pack is this one frozen moment: 68
 # minutes into the Denver convective-weather ground stop, Thursday 8 May 2025.
 # ---------------------------------------------------------------------------
 FIXTURE_CLOCK = datetime.fromisoformat("2025-05-08T14:10:00-06:00")
 DATA_HORIZON_START = "2025-05-07"
 DATA_HORIZON_END = "2025-05-09"
+
+# OpsFeed is an ISO-8601 feed and it is strict about it. A date in any other
+# shape is refused at the edge rather than quietly missed, because "you sent me
+# the wrong shape" and "I have no record of that flight" are different facts and
+# a tool that blurs them teaches its caller nothing.
+ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 TIER_RANK = {"Member": 0, "Silver": 1, "Gold": 2, "Summit": 3}
 
@@ -39,7 +46,7 @@ class NotFound(Exception):
 
 
 # ---------------------------------------------------------------------------
-# Loaders — cached at module scope, since a classroom re-runs cells a lot.
+# Loaders: cached at module scope, since a classroom re-runs cells a lot.
 # ---------------------------------------------------------------------------
 _cache = {}
 
@@ -77,10 +84,13 @@ def load_flights():
 
 
 # ---------------------------------------------------------------------------
-# get_flight_status backend — OpsFeed stand-in
+# get_flight_status backend: OpsFeed stand-in
 # ---------------------------------------------------------------------------
 def get_flight_status_raw(flight_no, date):
-    """Returns one flights.csv row, event-enriched, or a NOT_IN_HORIZON marker."""
+    """Returns one flights.csv row, event-enriched, a NOT_IN_HORIZON marker, or
+    an error if `date` is not ISO-8601."""
+    if not ISO_DATE.match(str(date)):
+        return {"error": "date must be YYYY-MM-DD, got %s" % date}
     if not (DATA_HORIZON_START <= date <= DATA_HORIZON_END):
         return {"flight_no": flight_no, "date": date, "status": "NOT_IN_HORIZON",
                 "note": f"No OpsFeed record outside {DATA_HORIZON_START} to {DATA_HORIZON_END}."}
@@ -103,7 +113,7 @@ def _add_minutes(hhmm, minutes):
 
 
 # ---------------------------------------------------------------------------
-# lookup_booking backend — Altura PNR retrieve
+# lookup_booking backend: Altura PNR retrieve
 # ---------------------------------------------------------------------------
 def get_booking_raw(pnr):
     bookings = load_bookings()["bookings"]
@@ -113,7 +123,7 @@ def get_booking_raw(pnr):
 
 
 def get_disrupted_segment(booking):
-    """The segment to act on — not necessarily segment 1, and for a connection
+    """The segment to act on: not necessarily segment 1, and for a connection
     at risk, not necessarily the segment that's actually late."""
     actionable = {"cancelled_by_airline", "diverted", "missed_connection"}
     for seg in booking["segments"]:
@@ -121,7 +131,7 @@ def get_disrupted_segment(booking):
             return seg
 
     # Connection at risk (T9WN4C's shape): the inbound leg is delayed, but the
-    # leg that needs an alternative is the downstream one it feeds into — a
+    # leg that needs an alternative is the downstream one it feeds into. A
     # search on the inbound's own origin/dest just returns "you, but later."
     # The cache is keyed on whichever leg the case authors built out, so trust
     # that: if the downstream segment's O-D is a cached search key and the
@@ -133,7 +143,7 @@ def get_disrupted_segment(booking):
         if inbound_live.get("status") not in ("ON_TIME", "NOT_IN_HORIZON") and cache_key in load_alternatives()["entries"]:
             return downstream
 
-    # Nothing pre-flagged in the booking — check whether OpsFeed shows the
+    # Nothing pre-flagged in the booking. Check whether OpsFeed shows the
     # segment running, delayed, cancelled or diverted right now.
     for seg in booking["segments"]:
         live = get_flight_status_raw(seg["flight_no"], seg["date"])
@@ -143,7 +153,7 @@ def get_disrupted_segment(booking):
 
 
 # ---------------------------------------------------------------------------
-# search_alternatives backend — Altura availability search
+# search_alternatives backend: Altura availability search
 # ---------------------------------------------------------------------------
 def search_alternatives_raw(origin, dest, date, cabin, pax_count=1, exclude_flight_no=None):
     cache = load_alternatives()
@@ -199,7 +209,7 @@ def earliest_alternative_date(origin, dest, date, cabin, pax_count=1):
 
 
 # ---------------------------------------------------------------------------
-# check_policy backend — the entitlements engine, resolution_order verbatim
+# check_policy backend: the entitlements engine, resolution_order verbatim
 # ---------------------------------------------------------------------------
 def resolve_policy(cause_code, delay_minutes, status, fare_family, loyalty_tier,
                     overnight, wait_minutes_for_alternative=None, escalation_context=None):
@@ -231,7 +241,7 @@ def resolve_policy(cause_code, delay_minutes, status, fare_family, loyalty_tier,
     row = next((r for r in policy["rows"]
                 if r["cause_class"] == cause_class and r["band"] == band), None)
     if row is None:
-        raise NotFound(f"No policy row for {cause_class}/{band} — a real gap, like the "
+        raise NotFound(f"No policy row for {cause_class}/{band}, a real gap, like the "
                         f"pre-14.3 DIVERTED fall-through this pack's changelog tells you about.")
     row = deepcopy(row)
     policy_row_id = row["policy_row_id"]
@@ -336,7 +346,7 @@ def resolve_policy(cause_code, delay_minutes, status, fare_family, loyalty_tier,
         goodwill_out.setdefault("approval", None)
     refund_out["executes"] = "human"  # policy["auto_approval"]["refund"]["agent_executes"] is always false
 
-    # Step 9: escalation triggers (data-derivable subset — the rest are
+    # Step 9: escalation triggers (data-derivable subset, the rest are
     # conversational and owned by the system prompt, per the policy file's
     # own escalation_triggers.conversation_note).
     escalate = []
@@ -372,7 +382,7 @@ def resolve_policy(cause_code, delay_minutes, status, fare_family, loyalty_tier,
 
 
 # ---------------------------------------------------------------------------
-# Write tools — hold / confirm / voucher / escalate / send_confirmation.
+# Write tools: hold / confirm / voucher / escalate / send_confirmation.
 # All state is in-memory only, per data/americas/README.md: they validate
 # against the data files (option ids, voucher tiers, queues) but never write
 # to them.
@@ -395,7 +405,7 @@ def hold_seat(option_id, pnr):
 
 
 def simulate_customer_confirm_click(hold_id):
-    """Not a model tool. Stands in for the UI button — the only place a
+    """Not a model tool. Stands in for the UI button. The only place a
     confirmation_token is ever minted. A model that types 'yes, confirmed'
     in a message never reaches this function."""
     if hold_id not in _holds:
@@ -512,7 +522,7 @@ def _selftest():
     print(f"  hold {hold['hold_id']} + real click token -> {real}")
 
     if failures:
-        raise SystemExit(f"\n{failures} policy example(s) did not match — fix resolve_policy before teaching from this.")
+        raise SystemExit(f"\n{failures} policy example(s) did not match. Fix resolve_policy before teaching from this.")
     print("\nAll self-tests passed.")
 
 
