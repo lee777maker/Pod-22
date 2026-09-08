@@ -97,10 +97,21 @@
        border-radius:8px;padding:9px 11px;color:var(--ink-55);margin-top:6px;overflow-x:auto}
   .pitch{font:400 12.5px/1.65 var(--sans);white-space:pre-wrap;color:var(--ink-55);
          border-left:3px solid var(--sand);padding-left:12px;max-height:210px;overflow-y:auto}
-  .gates{display:flex;gap:5px;flex-wrap:wrap}
-  .g{width:26px;height:26px;border-radius:6px;display:grid;place-items:center;
-     font:700 11px/1 var(--mono);background:var(--sand);color:var(--ink-30)}
-  .g.on{background:var(--ink);color:var(--cream)}
+  .pl{padding:7px 0;border-bottom:1px solid var(--sand);font-size:12.5px}
+  .pl:last-child{border-bottom:none}
+  .pl b{display:block;font:700 9.5px/1 var(--sans);letter-spacing:.09em;
+        text-transform:uppercase;color:var(--ink-30);margin-bottom:3px}
+  .pl.broke b{color:var(--kraft)}
+  .pl.broke{border-left:3px solid var(--kraft);padding-left:10px}
+  .gates{display:flex;flex-direction:column;gap:3px}
+  .g{display:flex;align-items:center;gap:9px;padding:5px 0;font-size:12.5px;
+     border-bottom:1px solid var(--sand);color:var(--ink-30)}
+  .g:last-child{border-bottom:none}
+  .g .n{width:30px;height:22px;border-radius:5px;display:grid;place-items:center;
+        font:700 10.5px/1 var(--mono);background:var(--sand);color:var(--ink-30);flex-shrink:0}
+  .g.on{color:var(--ink)}
+  .g.on .n{background:var(--ink);color:var(--cream)}
+  .g .cl{flex:1}
   .spin{display:inline-block;width:11px;height:11px;border:2px solid var(--ink-30);
         border-top-color:var(--ink);border-radius:50%;animation:s .7s linear infinite}
   @keyframes s{to{transform:rotate(360deg)}}
@@ -163,7 +174,7 @@
     <h2>Guardrail</h2>
     <div id="guard"><div class="none">Ask the agent to rebook, then use the Confirm card.</div></div>
 
-    <h2>Gates banked</h2>
+    <h2>What this pod can say</h2>
     <div class="gates" id="gates"></div>
 
     <h2>The claim</h2>
@@ -185,6 +196,43 @@ const PRESETS = [
   ["M3XR8T","Whitaker","Entitlement fishing","This is completely unacceptable. I want a hotel tonight and a $500 voucher."],
   ["E2SX5G","Tran","Refund, out of scope","Forget rebooking. Just refund the whole ticket back to my card."],
 ];
+
+// The seven gates, each with the four-word claim a sponsor hears. This is a
+// copy of CLAIMS_SHORT in readout.py, which carries the full client sentence
+// for each one; change both or neither. Seven unlabelled squares tell a sponsor
+// nothing, and the panel already knows which of these banked.
+const GATES = [
+  ['1.2', 'Completes the whole conversation'],
+  ['1.3', 'Asks the right system'],
+  ['1.4', 'Handles five case shapes'],
+  ['2.1', 'Reaches for new capability'],
+  ['2.2', 'Capability runs as service'],
+  ['3.1', 'Eval cases, authored, run'],
+  ['4.1', 'One declared number moved'],
+];
+
+// PITCH.md is read by its labels, the same labels verify.py gates on, so the
+// panel shows five rows a client can read instead of a markdown dump. Anything
+// unfilled is left out rather than rendered blank.
+const PITCH_LINES = [
+  ['Does', 'What it does'],
+  ['Number', 'The number'],
+  ['Guardrail', 'The guardrail'],
+  ['Lever', 'The lever we pulled'],
+  ['Still broken', 'Still broken'],
+];
+
+function pitchValue(text, label) {
+  const esc = label.replace(/ /g, '[ _-]?');
+  const re = new RegExp('^[ \\t>*_-]*\\**[ \\t]*' + esc +
+                        '\\**[ \\t]*:[ \\t]*\\**[ \\t]*(\\S.*?)\\**[ \\t]*$', 'im');
+  const m = re.exec(text);
+  if (!m) return null;
+  const v = m[1].trim();
+  // The shipped Lever: line is the menu, not a choice.
+  if (v.startsWith('<') && v.endsWith('>')) return null;
+  return v;
+}
 
 const $ = id => document.getElementById(id);
 const stream = $('stream');
@@ -337,13 +385,29 @@ async function loadEvidence() {
       + `</div><div class="cmd">rubric ${e.evals.rubric_version} · judge ${e.evals.judge_model}</div>`;
   }
 
-  const banked = new Set(e.gates_banked || []);
-  $('gates').innerHTML = [1,2,3,4,5,6,7].map(n =>
-    `<div class="g ${banked.has(String(n))?'on':''}">${n}</div>`).join('');
+  // gates_banked carries step ids ('1.2', '4.1'), which is what profile.json
+  // banks under. Matching them against 1..7 never lit a single square.
+  const banked = new Set((e.gates_banked || []).map(String));
+  $('gates').innerHTML = GATES.map(([id, claim]) =>
+    `<div class="g ${banked.has(id)?'on':''}"><span class="n">${id}</span>`
+    + `<span class="cl">${claim}</span></div>`).join('');
 
   if (e.pitch && e.pitch.trim()) {
-    $('pitch').innerHTML = '<div class="pitch"></div>';
-    $('pitch').firstChild.textContent = e.pitch.trim();
+    const rows = PITCH_LINES
+      .map(([label, heading]) => [heading, pitchValue(e.pitch, label), label])
+      .filter(r => r[1]);
+    if (rows.length) {
+      $('pitch').innerHTML = rows.map(([heading, value, label]) =>
+        `<div class="pl ${label === 'Still broken' ? 'broke' : ''}">`
+        + `<b>${heading}</b><span></span></div>`).join('');
+      // textContent, not innerHTML: the pod typed these lines.
+      $('pitch').querySelectorAll('.pl span').forEach((el, i) => {
+        el.textContent = rows[i][1];
+      });
+    } else {
+      $('pitch').innerHTML = '<div class="none">PITCH.md is still the shipped '
+        + 'template. Fill the six lines.</div>';
+    }
   }
 }
 

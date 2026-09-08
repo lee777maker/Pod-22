@@ -1,24 +1,39 @@
 #!/usr/bin/env python3
 """bench.py: measure your agent. GIVEN; you should not need to edit this.
 
-    python3 bench.py --label before               # 5 Stage 1 shapes, 1 run each
-    python3 bench.py --label before --runs 3      # 3 runs each, for a real p95
+    python3 bench.py --label before --runs 3      # 5 Stage 1 shapes, 3 runs each
+    python3 bench.py --label after --runs 3 --cold   # same, on a cache it pays for
     python3 bench.py --label after --stage 2      # the harder shapes
     python3 bench.py --compare before after       # what your lever actually did
 
 Every lane measures with this. The cost lane reads the token and cache columns,
-the speed lane reads p50/p95, the intelligence lane reads the resolved count on
-stage 2. One harness, so a pod never has to argue about whose numbers are whose.
+the speed lane reads p50 and the mean, the intelligence lane reads the wire-rule
+count on stage 2. One harness, so a pod never has to argue about whose numbers
+are whose.
 
 Results land in .workshop/bench-<label>.json. The gate (verify.py 4.1) reads two
 of those files, so a pod that tunes before it measures has nothing to show.
 
 ON --runs. The default is 1 run per shape, which is five conversations and about
 a minute: enough to see a big move, not enough to defend a small one. At 1 run
-per shape, output-token deltas under about 15% are sampling noise, and p95 is
-just the slowest of the five. Use --runs 3 on both sides before you put a small
-number in front of a sponsor. Whatever you pick, pick the same on both sides:
-the gate refuses to compare a 1-run before with a 3-run after.
+per shape, output-token deltas under about 15% are sampling noise. Use --runs 3
+on both sides before you put a small number in front of a sponsor, and the gate
+requires it. Whatever you pick, pick the same on both sides.
+
+ON p95. Reported, and not graded, because at the sample sizes a workshop can
+reach nearest-rank p95 IS the single slowest conversation: 5 runs, 15 runs, and
+it stays the maximum until about 40. The maximum of 15 samples is bigger than
+the maximum of 5, so a delta between two maxima is the noisiest number in this
+file. It renders as "slowest of N observed" for exactly that reason, and the
+speed lane is graded on p50.
+
+ON --cold. Prompt caching writes cost more than fresh input and reads cost much
+less, so a run that reads a cache somebody else already paid to write bills a
+discount that production never gets: every idle gap re-pays the write. Bench an
+'after' minutes after a 'before' and that is what happens. --cold puts a nonce
+into the system prefix for this sweep only, so the first conversation pays its
+own cache write and the rest read it, which is the steady state a deployed agent
+actually sits in. Without it, watch for the warning under the cache line.
 
 On the modelled cost: it is a model of MODEL's published per-token price applied
 to what your run actually consumed, and it is the *model* cost only. Larkspur's
@@ -36,6 +51,7 @@ import os
 import statistics
 import sys
 import time
+import uuid
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -75,6 +91,29 @@ def load_agent():
             del sys.modules[name]
     import agent
     return agent
+
+
+def cold_start(agent) -> str:
+    """Make this sweep pay for its own cache prefix.
+
+    You cannot evict a cache entry, so "cold" cannot mean clearing one. It means
+    running against a prefix nobody has stored yet, which is what a freshly
+    deployed agent sits behind. Every version of this agent builds its system
+    prompt as SYSTEM_PROMPT + TONE_ADDENDUM, so one nonce line appended to
+    TONE_ADDENDUM before the sweep is a prefix the cache has never seen: the
+    first conversation writes it, the rest read it, and the write shows up in
+    the bill where it belongs.
+
+    Returns the nonce. If an agent hardcodes its system string instead, this
+    changes nothing and the warm-cache warning under the cache line is the
+    honest signal, not this function.
+    """
+    nonce = uuid.uuid4().hex[:8]
+    marker = "\n\nBench cold-start marker %s. It carries no instruction." % nonce
+    agent.TONE_ADDENDUM = (getattr(agent, "TONE_ADDENDUM", "") or "") + marker
+    print("Cold sweep: the system prefix carries a one-off marker (%s), so the first\n"
+          "conversation pays the cache write instead of reading a warm one.\n" % nonce)
+    return nonce
 
 
 def run_one(agent, task) -> dict:
@@ -168,7 +207,7 @@ def percentile(values, q) -> float:
     return round(ordered[idx], 2)
 
 
-def aggregate(rows, model, stage, runs) -> dict:
+def aggregate(rows, model, stage, runs, cold=False) -> dict:
     walls = [r["wall"] for r in rows]
     resolved = [r for r in rows if r["resolved"]]
     cache_read = sum(r["cache_read"] for r in rows)
@@ -194,8 +233,18 @@ def aggregate(rows, model, stage, runs) -> dict:
         "cache_write": cache_write,
         # None means caching was never switched on, which is a different fact
         # from a 0% hit rate. Do not collapse them.
+        #
+        # The denominator is every input token this run was billed for, which is
+        # three counters: the API reports input_tokens exclusive of both cache
+        # columns, so leaving cache_write out of it overstates the hit rate by
+        # exactly the tokens you paid a premium to store.
         "cache_hit_pct": (None if not offered
-                          else round(100.0 * cache_read / ((cache_read + fresh_input) or 1), 1)),
+                          else round(100.0 * cache_read
+                                     / ((cache_read + cache_write + fresh_input) or 1), 1)),
+        # True when this sweep paid for its own cache prefix. A warm sweep is
+        # not wrong, it just is not the number to put in a pitch unbadged.
+        "cold": bool(cold),
+        "warm_cache_read": bool(cache_read and not cache_write),
         "model_cost_per_contact": round(cost_of(rows, model), 4),
         "rules_checked": sum(1 for r in rows if r.get("rules_pass") is not None),
         "rules_passed": sum(1 for r in rows if r.get("rules_pass") is True),
@@ -212,15 +261,21 @@ def render(agg, label) -> str:
          "─" * 68,
          "  resolved            %d/%d  (%.0f%%)   returned text and the loop closed, not "
          "\"handled correctly\"" % (agg["resolved"], agg["n"], agg["resolved_pct"]),
-         "  latency             p50 %.2fs   p95 %.2fs   mean %.2fs"
-         % (agg["p50_s"], agg["p95_s"], agg["mean_s"]),
+         "  latency             p50 %.2fs   mean %.2fs   slowest of %d observed %.2fs"
+         % (agg["p50_s"], agg["mean_s"], agg["n"], agg["p95_s"]),
          "  turns / tool calls  %.2f / %.2f  mean" % (agg["turns_mean"], agg["tool_calls_mean"]),
          "  tokens per contact  %d in   %d out" % (agg["input_per_contact"], agg["output_per_contact"])]
     if agg["cache_hit_pct"] is None:
         L.append("  cache               not used on any turn")
     else:
-        L.append("  cache               %d read / %d written   hit %.0f%%"
-                 % (agg["cache_read"], agg["cache_write"], agg["cache_hit_pct"]))
+        L.append("  cache               %d read / %d written   hit %.0f%%%s"
+                 % (agg["cache_read"], agg["cache_write"], agg["cache_hit_pct"],
+                    "   (cold sweep)" if agg.get("cold") else ""))
+    if _warm(agg):
+        L.append("  ! this run read a cache it did not pay to write; re-run with --cold or")
+        L.append("    say warm in the pitch. A cache write is priced above fresh input and")
+        L.append("    every idle gap re-pays it, so a sweep that only reads is a discount")
+        L.append("    production does not get.")
     L.append("  model cost/contact  $%.4f   (model only, not loaded)" % agg["model_cost_per_contact"])
     L.append("  at Larkspur volume  $%s/week vs $%s human   (x %s chats/week)"
              % (format(round(agg["model_cost_per_contact"] * WEEKLY_VOLUME), ","),
@@ -241,6 +296,15 @@ def render(agg, label) -> str:
 ARROWS = {"down_good": ("better", "worse"), "up_good": ("better", "worse")}
 
 
+def _warm(summary) -> bool:
+    """True when that sweep read a cache it never paid to write. Recomputed from
+    the two counters rather than trusted from the file, so a bench written
+    before this flag existed still reads correctly."""
+    if summary.get("warm_cache_read") is not None:
+        return bool(summary["warm_cache_read"])
+    return bool(summary.get("cache_read") and not summary.get("cache_write"))
+
+
 def compare(a_label, b_label) -> int:
     paths = [os.path.join(WORKSHOP, "bench-%s.json" % lbl) for lbl in (a_label, b_label)]
     for p, lbl in zip(paths, (a_label, b_label)):
@@ -254,7 +318,9 @@ def compare(a_label, b_label) -> int:
     rows = [
         ("resolved_pct", "resolved", False, "%.0f%%"),
         ("p50_s", "p50 latency", True, "%.2fs"),
-        ("p95_s", "p95 latency", True, "%.2fs"),
+        # Not "p95". At these sample sizes nearest-rank p95 is the single
+        # slowest conversation, so the row is named what it is.
+        ("p95_s", "slowest observed", True, "%.2fs"),
         ("turns_mean", "turns (mean)", True, "%.2f"),
         ("input_per_contact", "input tokens / contact", True, "%d"),
         ("output_per_contact", "output tokens / contact", True, "%d"),
@@ -297,6 +363,14 @@ def compare(a_label, b_label) -> int:
     if 1 in (a.get("runs_per_shape"), b.get("runs_per_shape")):
         print("  1 run per shape: output-token deltas under ~15% are noise; "
               "--runs 3 for a claim.")
+    print("  slowest observed is the single slowest conversation on each side, not a "
+          "percentile.")
+    for label, side in ((a_label, a), (b_label, b)):
+        if _warm(side):
+            print("  ! '%s' read a cache it did not pay to write. Re-bench it with --cold, "
+                  "or say" % label)
+            print("    warm beside the number. This is the whole cost claim on a warm "
+                  "prefix.")
     if a.get("stage") != b.get("stage") or a.get("runs_per_shape") != b.get("runs_per_shape"):
         print("  ! These two runs are not comparable: stage %s/%s, runs %s/%s."
               % (a.get("stage"), b.get("stage"), a.get("runs_per_shape"), b.get("runs_per_shape")))
@@ -312,8 +386,12 @@ def main() -> int:
     ap.add_argument("--stage", type=int, default=1, choices=(1, 2), help="which task set")
     ap.add_argument("--runs", type=int, default=1,
                     help="runs per shape (default 1; at 1 run per shape, output-token "
-                         "deltas under ~15%% are noise and p95 is just the slowest of the "
-                         "five, so use --runs 3 for a claim)")
+                         "deltas under ~15%% are noise, so use --runs 3 for a claim, "
+                         "which is what the gate requires)")
+    ap.add_argument("--cold", action="store_true",
+                    help="put a nonce into the system prefix for this sweep, so it pays "
+                         "for its own cache write instead of reading one a previous "
+                         "sweep already paid for")
     ap.add_argument("--compare", nargs=2, metavar=("A", "B"), help="diff two labels")
     args = ap.parse_args()
 
@@ -330,6 +408,9 @@ def main() -> int:
           % (args.label, args.stage, len(tasks), args.runs, len(tasks) * args.runs))
     print("Model: %s\n" % agent.MODEL)
 
+    if args.cold:
+        cold_start(agent)
+
     rows = []
     for run in range(args.runs):
         for task in tasks:
@@ -341,7 +422,7 @@ def main() -> int:
                              % (row["wall"], row["turns"],
                                 "ok" if row["resolved"] else "FAILED"))
 
-    agg = aggregate(rows, agent.MODEL, args.stage, args.runs)
+    agg = aggregate(rows, agent.MODEL, args.stage, args.runs, cold=args.cold)
     print(render(agg, args.label))
 
     os.makedirs(WORKSHOP, exist_ok=True)

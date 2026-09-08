@@ -1,9 +1,15 @@
-Run the verifier for whichever step the person is on and translate the result into plain English.
-For someone who isn't comfortable in a terminal, lead with this, don't wait to be told.
+Work out which step this repo is on, run its gate, and translate what it printed into plain
+English. Assume nothing has been said yet: this may be the first thing typed in the session, so
+do not ask which step they are on and do not ask them to run anything first. Read it yourself,
+say where they are in one line, then run the gate.
 
-1. Run `python3 verify.py` to see the status board, then `python3 verify.py <step>` for their
-   current step. The steps are `1.2`, `1.3`, `1.4` (Build 1), `2.1`, `2.2` (Build 2), `3.1`
-   (Build 3), `4.1` (Build 4).
+This is the command to lead with for anyone who would rather not lead with a terminal.
+
+1. Run `python3 verify.py` to see the status board. Take the lowest step that has not passed as
+   their current step, and run `python3 verify.py <step>` for it. The steps are `1.2`, `1.3`,
+   `1.4` (Build 1), `2.1`, `2.2` (Build 2), `3.1` (Build 3), `4.1` (Build 4). If the board is
+   empty, or nothing imports, they are at `1.2` and the first thing to run is
+   `python3 run.py K7PQ2M --trace`.
 2. If it passes: tell them plainly, and give them the evidence code it printed. That is their
    receipt for the step. There is nothing to upload and nothing to push.
 3. Then point them at `python3 readout.py`. It is the one-page submission for the build: what the

@@ -23,10 +23,19 @@ from typing import Any, Dict, List, Optional
 
 RULE = "─" * 74
 
-# A tool RESULT is evidence, not a transcript. Long enough that a reader (or an
-# eval judge) can see what actually came back, short enough that a 4k-token
-# policy row does not swamp the page it is quoted on.
+# A tool RESULT is evidence, not a transcript, and the two readers of it want
+# different lengths. So both are kept, and neither number governs the other.
+#
+#   RESULT_LINE    what fits under a call on the trace, so the page stays readable
+#   RESULT_CHARS   what `run.py -v` shows when you want the whole answer
+#   RESULT_GRADER  what the eval judge is allowed to read, in `result_full`
+#
+# The last one exists because a rendering constant should never decide whether a
+# grader can see the policy row it was asked to check. check_policy returns the
+# largest object in this pack.
+RESULT_LINE = 100
 RESULT_CHARS = 500
+RESULT_GRADER = 4000
 
 
 def _short(value: Any, limit: int = 88) -> str:
@@ -116,17 +125,25 @@ class Tracer:
                     # a trace that records only the ask cannot tell you whether
                     # the agent was reading a real policy row or an error dict.
                     "result": None,
+                    # The same answer, at grader length. Read by the eval
+                    # judge, never printed.
+                    "result_full": None,
                 })
 
     def record_result(self, name: str, output: Any) -> bool:
         """Attach a compact result summary to the earliest call of `name` that
         has not been answered yet. Execution order matches block order, so the
         earliest-unanswered rule is correct even when one turn calls the same
-        tool twice."""
+        tool twice.
+
+        Two lengths, recorded once. `result` is what gets rendered; `result_full`
+        is what a grader is shown. Truncating to the display length here would
+        make a page-layout number decide what an eval judge can read."""
         for turn in self.turns:
             for call in turn["tool_calls"]:
                 if call.get("name") == name and call.get("result") is None:
                     call["result"] = _short(output, RESULT_CHARS)
+                    call["result_full"] = _short(output, RESULT_GRADER)
                     return True
         return False
 
@@ -156,12 +173,19 @@ class Tracer:
     def cache_hit_ratio(self) -> Optional[float]:
         """Cached share of everything that was read as input. None when nothing
         was ever offered to the cache, which is not the same as a 0% hit rate:
-        0% means you cached and it missed, None means you never cached."""
+        0% means you cached and it missed, None means you never cached.
+
+        The denominator is every input token the run was billed for, and that is
+        three counters, not two: the API reports `input_tokens` exclusive of
+        both cache columns, so leaving `cache_write` out overstates the hit rate
+        by exactly the tokens you paid a premium to store. 15,000 read, 5,000
+        written and 1,000 fresh is 71%, not 94%."""
         tokens = self.total_tokens
         offered = tokens["cache_read"] + tokens["cache_write"]
         if not offered:
             return None
-        return tokens["cache_read"] / (tokens["cache_read"] + tokens["input"] or 1)
+        billable = tokens["cache_read"] + tokens["cache_write"] + tokens["input"]
+        return tokens["cache_read"] / (billable or 1)
 
     def summary(self) -> Dict[str, Any]:
         return {
@@ -179,7 +203,10 @@ class Tracer:
         }
 
     # -- rendering ---------------------------------------------------------
-    def render(self) -> str:
+    def render(self, verbose: bool = False) -> str:
+        """The wire, as a page. `verbose` is `run.py -v`: it widens what a tool
+        answered from a headline to the whole recorded result."""
+        result_chars = RESULT_CHARS if verbose else RESULT_LINE
         lines = [RULE, "WIRE TRACE  ·  %d API turn(s)" % len(self.turns), RULE]
         for i, turn in enumerate(self.turns, start=1):
             flags = []
@@ -187,7 +214,11 @@ class Tracer:
             flags.append("thinking=%s" % (turn["thinking"] or "off"))
             if turn["effort"]:
                 flags.append("effort=%s" % turn["effort"])
-            flags.append("format=%s" % ("ON" if turn["format"] else "-"))
+            # format= and the streamed line below print only when something
+            # actually set them. A field that is structurally always off is
+            # noise on the one surface this exercise asks people to read.
+            if turn["format"]:
+                flags.append("format=ON")
             if turn["tool_choice"]:
                 flags.append("tool_choice=%s" % turn["tool_choice"])
 
@@ -210,17 +241,29 @@ class Tracer:
                 tag = " [mcp]" if call.get("via_mcp") else ""
                 lines.append("      ⚙ %s%s(%s)"
                              % (call["name"], tag, _short(call["input"], 70)))
+                # What the tool ANSWERED, under the call that asked for it. The
+                # ask and the answer are different facts and three steps of this
+                # build tell you to read the second one.
+                if call.get("result") is not None:
+                    lines.append("        ↩ %s" % _short(call["result"], result_chars))
 
         s = self.summary()
         lines += [
             "",
             RULE,
             "tool calls: %d  [%s]" % (s["tool_calls"], ", ".join(s["tool_names"]) or "none"),
-            "thinking blocks seen: %s   structured format used: %s   streamed: %s"
-            % (s["saw_thinking"], s["used_format"], s["streamed"]),
-            "tokens: %d in / %d out    wall clock: %ss"
-            % (s["tokens"]["input"], s["tokens"]["output"], s["elapsed"]),
         ]
+        seen = "thinking blocks seen: %s" % s["saw_thinking"]
+        if s["used_format"]:
+            seen += "   structured format used: True"
+        if s["streamed"]:
+            seen += "   streamed: True (%d delta(s) read)" % s["deltas_seen"]
+        lines.append(seen)
+        lines.append("tokens: %d in / %d out    wall clock: %ss"
+                     % (s["tokens"]["input"], s["tokens"]["output"], s["elapsed"]))
+        if not verbose and any(c.get("result") for c in self.tool_calls):
+            lines.append("(tool results shortened to %d characters. run.py -v prints %d.)"
+                         % (RESULT_LINE, RESULT_CHARS))
         ratio = s["cache_hit_ratio"]
         if ratio is None:
             lines.append("cache: not used on any turn")
@@ -322,6 +365,12 @@ def wrap(client: Any, tracer: Tracer) -> TracedClient:
 # for the given nine, in agent.py's LOCAL_TOOLS for the ones you add), so it
 # has to be handed back in. wrap() marks the current conversation's tracer as
 # the one to hand it to, and one conversation runs at a time.
+#
+# CONTRACT, not an observation: one conversation at a time. Everything in this
+# pack that runs more than one (bench.py, eval_harness.py, the gates) runs them
+# sequentially. Run two in parallel threads and results get attributed to the
+# wrong tracer, silently, because attribution goes through the module global
+# below rather than through the call.
 # ---------------------------------------------------------------------------
 
 _ACTIVE: Optional[Tracer] = None
@@ -338,3 +387,59 @@ def record_tool_result(name: str, output: Any) -> bool:
         return tracer.record_result(name, output)
     except Exception:  # noqa: BLE001 - recording evidence must never break a run
         return False
+
+
+# ---------------------------------------------------------------------------
+# What the tool list costs, before a single conversation runs
+# ---------------------------------------------------------------------------
+_TAX_PROBE = [{"role": "user", "content": "."}]
+
+
+def tool_schema_tokens(tools, client=None, model=None, per_tool=False):
+    """What the schemas on the wire cost, in total and optionally per tool.
+
+    Returns (total, {name: tokens}, how). `how` is "counted" when the SDK's
+    token counter answered (deterministic, no generation, and it prices the
+    schema exactly as the API will) and "estimated" when it could not, in which
+    case the numbers are len(json)/4 and must be labelled as estimates wherever
+    they are printed.
+
+    `total` is the whole list's tax: what having these tools costs above having
+    none. The per-tool numbers are MARGINAL, measured leave-one-out, so each one
+    answers "what would dropping this tool save me". They do not add up to the
+    total exactly, because a tokenizer does not decompose. Marginal is the
+    number that matters: the question at 2.1 is what the tenth tool cost.
+
+    This is the honest instrument for that question. Tokens in on a live
+    conversation moves with what the model chose to do; this does not move.
+    """
+    schemas = list(tools or [])
+    if not schemas:
+        return 0, {}, "counted"
+
+    if client is None or model is None:
+        return _estimated(schemas, per_tool)
+
+    def count(subset):
+        kwargs = {"model": model, "messages": _TAX_PROBE}
+        if subset:
+            kwargs["tools"] = subset
+        return client.messages.count_tokens(**kwargs).input_tokens
+
+    try:
+        floor = count([])
+        whole = count(schemas)
+        total = whole - floor
+        per = {}
+        if per_tool:
+            for i, schema in enumerate(schemas):
+                rest = schemas[:i] + schemas[i + 1:]
+                per[schema.get("name", "?")] = whole - (count(rest) if rest else floor)
+    except Exception:  # noqa: BLE001 - an estimate that says so beats no number
+        return _estimated(schemas, per_tool)
+    return total, per, "counted"
+
+
+def _estimated(schemas, per_tool=True):
+    per = {s.get("name", "?"): len(json.dumps(s, default=str)) // 4 for s in schemas}
+    return sum(per.values()), (per if per_tool else {}), "estimated"

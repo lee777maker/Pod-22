@@ -6,7 +6,8 @@
     "Case ids follow Larkspur's own convention: suite prefix, then a number.",
     "Graders run in order and ALL must pass. Put the cheap deterministic ones first.",
     "\"author\" is the person who wrote the case. Gate 3.1 looks for your name on at least one of them. A pod of six with one author has one person's judgement in it.",
-    "grnd-0101's expectation is at v2. v1 failed correct behaviour; see evals/GRADER-BUG.md."
+    "grnd-0101's expectation is at v2. v1 failed correct behaviour; see evals/GRADER-BUG.md.",
+    "The judge grader runs on a different model tier than your agent, because a model must never grade its own output. eval_harness.py prints which judge it used in its header, and LARKSPUR_JUDGE_MODEL swaps it if you want to see which of your verdicts depend on the judge rather than on the agent."
   ],
   "rubric_version": "v2",
   "cases": [

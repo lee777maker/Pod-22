@@ -27,6 +27,9 @@ from typing import Any, Dict, List
 
 from support import (MODEL, SYSTEM_PROMPT, Tracer, execute_tool, get_client,
                      record_tool_result, reset_call_log, runtime_preamble, wrap)
+# Used by tool_results() below and by the 2.2 seam at the bottom. Imported here
+# so this file reads top to bottom; it starts no server until something asks it.
+from support import mcp_client
 
 MAX_TOOL_CALLS = 8  # Larkspur's own week-2 build capped the loop at eight API
                     # turns. After that, a human takes over. Same number, same
@@ -121,13 +124,18 @@ def tool_results(response) -> List[Dict[str, Any]]:
 # exactly one way, and every one of them shows on the wire before it shows in
 # the code. So you read the trace first and the code second.
 #
-# Read it top to bottom and write down the symptoms you can see, in the order
-# you would fix them. Some hide behind others: while one thing stops the run,
-# the ones downstream of it have no way to show up yet. That ordering IS the
-# work of this step. Your build guide names the four; write your own list
-# before you look.
+# Your first run cannot show you four. One of them stops the run, and while it
+# does, the ones downstream of it have no way to appear. So the deliverable is
+# two columns, not four rows:
 #
-# No gate here. The list is the deliverable.
+#   SEEN        what this run actually shows you, and which function owns it
+#   PREDICTED   what you think is hiding behind the one that stopped the run
+#
+# The prediction is the point. It is a claim about a dependency you cannot see
+# yet, and step 1.2 is where you find out whether you were right. Being wrong
+# there is worth more than a list that was copied off a comment.
+#
+# No gate here. The two columns are the deliverable.
 # =============================================================================
 
 
@@ -424,29 +432,31 @@ LOCAL_TOOLS: Dict[str, Any] = {
 # client knows about goes over the wire instead of into LOCAL_TOOLS. It stays
 # inert until something discovers.
 # =============================================================================
-from support import mcp_client  # noqa: E402
 
-MCP_TOOLS: List[Dict[str, Any]] = []
+# Private on purpose. mcp_tools() is the only name worth reaching for: the
+# cache is empty until the first discovery, so a list that reads it directly
+# looks correct, type-checks, and hands back nothing.
+_MCP_CACHE: List[Dict[str, Any]] = []
 
 
 def mcp_tools() -> List[Dict[str, Any]]:
-    """Given. tools/list over the wire, once per process, cached in MCP_TOOLS.
+    """Given. tools/list over the wire, once per process, cached.
 
     Nothing starts the server until something calls this, so a file that has
     not been wired never spawns it. A server that will not start returns an
     empty list and says why, so a broken server costs you a message and two
     tools rather than a crash halfway through a customer conversation.
     """
-    global MCP_TOOLS
-    if MCP_TOOLS:
-        return MCP_TOOLS
+    global _MCP_CACHE
+    if _MCP_CACHE:
+        return _MCP_CACHE
     try:
-        MCP_TOOLS = mcp_client.discover()
+        _MCP_CACHE = mcp_client.discover()
     except Exception as exc:  # noqa: BLE001 - a dead server is not a stack trace
         print("  [mcp] no tools discovered: %s: %s" % (type(exc).__name__, exc))
         print("  [mcp] python3 support/mcp_selftest.py says why on one line.")
-        MCP_TOOLS = []
-    return MCP_TOOLS
+        _MCP_CACHE = []
+    return _MCP_CACHE
 
 
 def tool_list() -> List[Dict[str, Any]]:

@@ -32,6 +32,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
 SHARED_SECRET = b"larkspur-basecamp-reference-architecture"
+# Where a banked code goes. The gate mints it on this laptop; the site is where
+# the pod's progress becomes visible to the pod.
+BUILD_SITE = "https://virtual.partnerbasecamp.com/build/"
 # Everything this file banks lives here, and nowhere else. .workshop/ is
 # per-clone and gitignored: your codes are yours, on your laptop, and nothing
 # has to be committed for a gate to count.
@@ -85,6 +88,17 @@ STILL_BROKEN_RE = re.compile(
 # offering the alternatives is an unfilled line, and an unfilled line is no
 # lane at all.
 LEVER_LINE_RE = re.compile(r"^[ \t>*_-]*\**[ \t]*Lever\**[ \t]*:[ \t]*(.*)$", re.M | re.I)
+# The `Number:` line, read as a claim rather than as characters. A figure on its
+# own is not a claim: 0.0234 is a claim once it says dollars per resolved
+# contact over five shapes and three runs. So three things are read separately,
+# and the hint says which one is missing.
+NUMBER_LINE_RE = re.compile(r"^[ \t>*_-]*\**[ \t]*Number\**[ \t]*:[ \t]*\**[ \t]*(.*)$",
+                            re.M | re.I)
+# A unit is a currency sign or a percent against a figure, or a word sitting
+# against one: $0.11, 12%, 4.7s, 628 tokens, 5 shapes.
+UNIT_RE = re.compile(r"[$£€]\s*\d|\d\s*%|\d[\d,.]*\s*[A-Za-z]")
+# A denominator says what the figure is per. Any of these four says it.
+DENOM_RE = re.compile(r"(?i)(\bper\b|/|\bof\b|\bn\s*=)")
 
 
 @dataclass
@@ -92,6 +106,14 @@ class Check:
     passed: bool
     label: str
     hint: str = ""
+    # A note is prose, not a check: something the gate wants you to read, with
+    # nothing to pass or fail. It renders as · rather than ✓ and stays out of
+    # the count, so "7/7" always means seven things were actually checked.
+    note: bool = False
+
+
+def note(label: str) -> Check:
+    return Check(True, label, note=True)
 
 
 @dataclass
@@ -236,31 +258,77 @@ def step_2(args) -> List[Check]:
 
     # Length is not routing. A description can clear the floor and still send the
     # wrong argument, and the only place that shows is what the tool ANSWERED.
-    # So this gate runs one conversation and reads the results, not the schemas.
-    try:
-        _text, tracer = call_agent(agent.run_agent, "K7PQ2M", "Marchetti",
-                                    "My flight was disrupted. What happens next?")
-    except Exception as exc:  # noqa: BLE001: the loop, not the schemas
-        raise StepFailure(
-            "this gate runs one conversation before it can read any results, and that "
-            "conversation stopped on an error:\n\n      %s: %s\n\n"
-            "      Gate 1.2 is the one that covers the loop. Clear that first, then "
-            "come back to this one." % (type(exc).__name__, exc)
-        ) from exc
-    if tracer is None:
-        raise StepFailure("run_agent() didn't create a tracer. Did you call new_session()?")
-
-    status_calls = [c for c in tracer.tool_calls if c.get("name") == "get_flight_status"]
-    refused = [c for c in status_calls if "error" in (c.get("result") or "")]
-    checks.append(Check(
-        not refused,
-        "get_flight_status answered with data, not a refusal (%d of %d call(s) refused)"
-        % (len(refused), len(status_calls)),
-        hint="the model passed a date the backend refused; what did the field description "
-             "tell it? The backend said: %s"
-             % (refused[0].get("result") if refused else ""),
-    ))
+    # So this gate runs conversations and reads the results, not the schemas.
+    #
+    # Three attempts, first clean one wins, the same rule gates 2.1 and 2.2 use:
+    # whether the model reaches for a tool, and which arguments it sends, is a
+    # sampled decision, and one sample is not a routing verdict either way.
+    attempts, verdict, tracer = 3, None, None
+    for attempt in range(1, attempts + 1):
+        try:
+            _text, tracer = call_agent(agent.run_agent, "K7PQ2M", "Marchetti",
+                                        "My flight was disrupted. What happens next?")
+        except Exception as exc:  # noqa: BLE001: the loop, not the schemas
+            raise StepFailure(
+                "this gate runs a conversation before it can read any results, and that "
+                "conversation stopped on an error:\n\n      %s: %s\n\n"
+                "      Gate 1.2 is the one that covers the loop. Clear that first, then "
+                "come back to this one." % (type(exc).__name__, exc)
+            ) from exc
+        if tracer is None:
+            raise StepFailure("run_agent() didn't create a tracer. Did you call new_session()?")
+        verdict = _status_verdict(tracer, attempt, attempts)
+        if verdict[0]:
+            break
+    checks.append(Check(verdict[0], verdict[1], hint=verdict[2]))
     return checks
+
+
+def _status_verdict(tracer, attempt: int, attempts: int) -> tuple:
+    """(passed, label, hint) for one conversation's get_flight_status calls.
+
+    Three ways this fails, and they are three different faults, so they get
+    three different hints:
+
+      no calls at all      nothing told the model this tool was worth reaching
+                           for. Zero refusals out of zero calls used to pass.
+      a refusal            the backend rejected the arguments it was sent.
+      NOT_IN_HORIZON       the arguments were well formed and pointed at
+                           nothing. The tool answered with no data, which is
+                           not the same as answering with data.
+    """
+    calls = [c for c in tracer.tool_calls if c.get("name") == "get_flight_status"]
+    where = "attempt %d of %d" % (attempt, attempts)
+    if not calls:
+        return (False,
+                "get_flight_status was never called (%s)" % where,
+                "This gate reads what the tool ANSWERED, and on this booking it was "
+                "never asked. The system prompt tells the model to check the flight "
+                "before it says anything about timing, so read the description back "
+                "and ask whether it says when to reach for this tool and what it "
+                "needs to already know.")
+
+    results = [(c.get("result") or "") for c in calls]
+    refused = [r for r in results if "error" in r]
+    empty = [r for r in results if "NOT_IN_HORIZON" in r]
+    if refused:
+        return (False,
+                "get_flight_status answered with a refusal (%d of %d call(s), %s)"
+                % (len(refused), len(calls), where),
+                "The model passed something the backend would not take. What did that "
+                "field's description tell it to send? The backend said: %s" % refused[0])
+    if empty:
+        return (False,
+                "get_flight_status answered with no record (%d of %d call(s), %s)"
+                % (len(empty), len(calls), where),
+                "That is not a refusal and it is not data: the arguments were well "
+                "formed and pointed at nothing OpsFeed has. The backend said: %s "
+                "Read what the booking said the segment was, and what the call "
+                "actually asked about." % empty[0])
+    return (True,
+            "get_flight_status answered with data, not a refusal (%d of %d call(s) "
+            "refused, %s)" % (0, len(calls), where),
+            "")
 
 
 def step_3(args) -> List[Check]:
@@ -353,22 +421,51 @@ def step_4(args) -> List[Check]:
                          hint="A loop that works on K7PQ2M and nowhere else is a loop tuned to "
                               "one ticket. Fix the shape that failed above and re-run all five: "
                               "python3 run.py --all --trace."))
-    checks.append(Check(True,
-                        "(R8KD3F, the abusive-message ticket, comes back calm and helpful with "
-                        "no gate on tone at all. That is Build 4's work, not a bug to fix "
-                        "here. Fixing it now hides the gap this run exists to show you.)"))
+    checks.append(note(
+        "(R8KD3F, the abusive-message ticket, comes back calm and helpful with "
+        "no gate on tone at all. That is Build 4's work, not a bug to fix "
+        "here. Fixing it now hides the gap this run exists to show you.)"))
     return checks
 
 
 # ---------------------------------------------------------------------------
 # Day 2
 # ---------------------------------------------------------------------------
+MIN_RUNS = 3  # one run per shape is a sample, not a measurement
+
+
 def _bench(label: str) -> Optional[dict]:
     path = os.path.join(HERE, ".workshop", "bench-%s.json" % label)
     if not os.path.exists(path):
         return None
     with open(path) as fh:
         return json.load(fh)["summary"]
+
+
+def _bench_rows(label: str) -> list:
+    """The per-conversation rows behind a bench summary. The intelligence lane
+    needs them: a suite's verdict on one sampled row is a coin flip, and the
+    only way to tell a fix from a flip is to count how often it held."""
+    path = os.path.join(HERE, ".workshop", "bench-%s.json" % label)
+    if not os.path.exists(path):
+        return []
+    try:
+        with open(path) as fh:
+            return json.load(fh).get("rows") or []
+    except (OSError, ValueError):
+        return []
+
+
+def _hard_gate_majority(rows) -> dict:
+    """suite -> True when a hard-gate suite passed its wire rules on MORE than
+    half the runs benched for it. Suites with no hard gate are left out."""
+    tally = {}
+    for row in rows:
+        if not row.get("hard_gate") or row.get("rules_pass") is None:
+            continue
+        seen, passed = tally.get(row.get("suite"), (0, 0))
+        tally[row.get("suite")] = (seen + 1, passed + (1 if row["rules_pass"] else 0))
+    return {suite: (passed * 2 > seen) for suite, (seen, passed) in tally.items()}
 
 
 def _declared_lane() -> Optional[str]:
@@ -472,16 +569,22 @@ def step_5(args) -> List[Check]:
     # model still or the movement measures the swap, not the thing they pulled.
     model_ok = (before.get("model") == after.get("model")
                 or lane == "intelligence")
-    comparable = (before.get("stage") == after.get("stage")
-                  and before.get("runs_per_shape") == after.get("runs_per_shape")
-                  and model_ok)
-    checks.append(Check(comparable, "the two runs are comparable",
-                        hint="Same stage and same --runs on both sides, and the same model "
-                             "unless your declared lane is intelligence, where the model swap "
-                             "is the lever. Stage %s/%s, runs %s/%s, model %s/%s. On a cost or "
-                             "speed claim, benching across different models measures the swap, "
-                             "not the thing you pulled."
-                             % (before.get("stage"), after.get("stage"),
+    # Comparable is doing real work now. It used to require only that --runs
+    # MATCHED, so two 1-run sweeps passed as comparable and a 10% move cleared a
+    # floor that bench.py's own docstring puts at 15% noise at that sample size.
+    runs_ok = (before.get("runs_per_shape") == after.get("runs_per_shape")
+               and (before.get("runs_per_shape") or 0) >= MIN_RUNS)
+    comparable = (before.get("stage") == after.get("stage") and runs_ok and model_ok)
+    checks.append(Check(comparable, "the two runs are comparable (%s runs per shape each)"
+                        % before.get("runs_per_shape"),
+                        hint="Same stage and at least %d runs per shape on both sides, and "
+                             "the same model unless your declared lane is intelligence, where "
+                             "the model swap is the lever. Stage %s/%s, runs %s/%s, model "
+                             "%s/%s. One run per shape is noise: bench with --runs 3 on both "
+                             "sides. On a cost or speed claim, benching across different "
+                             "models measures the swap, not the thing you pulled."
+                             % (MIN_RUNS,
+                                before.get("stage"), after.get("stage"),
                                 before.get("runs_per_shape"), after.get("runs_per_shape"),
                                 before.get("model"), after.get("model"))))
 
@@ -512,26 +615,61 @@ def step_5(args) -> List[Check]:
         ok, msg = _moved(before, after, "model_cost_per_contact", lower_is_better=True)
         checks.append(Check(ok, "cost lane: %s" % msg,
                             hint=_cost_lane_hint(after)))
+        # Not a gate, and it belongs beside the cost number rather than in a
+        # footnote: a sweep that read a cache it never wrote is priced on a
+        # discount an idle production agent does not get.
+        if after.get("warm_cache_read") or (after.get("cache_read")
+                                            and not after.get("cache_write")):
+            checks.append(note(
+                "(that after-bench read a cache it did not pay to write. Re-bench it "
+                "with --cold, or say warm beside the number in the pitch.)"))
     elif lane == "speed":
-        ok, msg = _moved(before, after, "p95_s", lower_is_better=True)
+        # p50, not p95. At 5 or 15 conversations nearest-rank p95 is the single
+        # slowest one, and the delta between two maxima is the noisiest number
+        # bench.py produces. The slowest observed still renders; it is not what
+        # a claim rests on here.
+        ok, msg = _moved(before, after, "p50_s", lower_is_better=True)
         checks.append(Check(ok, "speed lane: %s" % msg,
-                            hint="Needs a %.0f%% reduction in p95. With 5 conversations p95 "
-                                 "is the slowest one, so use --runs 3 for a number you can "
-                                 "defend." % (MIN_IMPROVEMENT * 100)))
+                            hint="Needs a %.0f%% reduction in p50, measured with --runs 3 "
+                                 "on both sides. p50 rather than p95 because at these "
+                                 "sample sizes p95 is just the slowest single conversation, "
+                                 "and the slowest of fifteen is bigger than the slowest of "
+                                 "five for reasons that have nothing to do with your lever. "
+                                 "Slowest observed: %.2fs to %.2fs."
+                                 % (MIN_IMPROVEMENT * 100,
+                                    before.get("p95_s") or 0.0, after.get("p95_s") or 0.0)))
     else:
         s2b, s2a = _bench("s2-before"), _bench("s2-after")
         checks.append(Check(s2b is not None and s2a is not None,
                             "stage 2 benched before and after",
                             hint="The intelligence lane's metric is the wire-rule count, "
                                  "which only exists on stage 2: python3 bench.py "
-                                 "--label s2-before --stage 2 (then s2-after)."))
+                                 "--label s2-before --stage 2 --runs 3 (then s2-after)."))
         if s2b and s2a:
             gained = (s2a.get("rules_passed") or 0) - (s2b.get("rules_passed") or 0)
-            checks.append(Check(gained >= 1,
-                                "intelligence lane: wire rules %s → %s passed"
-                                % (s2b.get("rules_passed"), s2a.get("rules_passed")),
-                                hint="At least one more Stage 2 case has to satisfy its "
-                                     "rules. bench --stage 2 names the failing hard gate."))
+            # A count that went up by one row out of fifteen can be a sampled
+            # tool choice rather than a fix. So the gained ground has to be a
+            # HARD-GATE suite that now holds on a majority of its runs, which
+            # is the difference between "it flipped once" and "it works".
+            was, now = _hard_gate_majority(_bench_rows("s2-before")), \
+                _hard_gate_majority(_bench_rows("s2-after"))
+            won = sorted(s for s, holds in now.items() if holds and not was.get(s))
+            checks.append(Check(gained >= 1 and bool(won),
+                                "intelligence lane: wire rules %s → %s passed, and a hard "
+                                "gate now holds on a majority of its runs (%s)"
+                                % (s2b.get("rules_passed"), s2a.get("rules_passed"),
+                                   ", ".join(won) or "none"),
+                                hint="Two things, and the second is the one that matters. "
+                                     "At least one more Stage 2 case has to satisfy its "
+                                     "rules, AND a hard-gate suite that was failing has to "
+                                     "pass on more than half its runs, so the win is a fix "
+                                     "and not one sampled tool choice. Hard gates failing "
+                                     "before: %s. Still failing after: %s. bench --stage 2 "
+                                     "--runs 3 names them."
+                                     % (", ".join(sorted(s for s, h in was.items() if not h))
+                                        or "none",
+                                        ", ".join(sorted(s for s, h in now.items() if not h))
+                                        or "none")))
     return checks
 
 
@@ -610,26 +748,43 @@ def step_6(args) -> List[Check]:
     # not benched yet is on schedule, not behind.
     bench_after = _bench("after")
     if bench_after is None:
-        checks.append(Check(True,
-                            "(no bench pair yet. The evidence panel will show bench numbers "
-                            "once Build 4 runs. Nothing required here.)"))
+        checks.append(note("(no bench pair yet. The evidence panel will show bench numbers "
+                           "once Build 4 runs. Nothing required here.)"))
     else:
-        checks.append(Check(True, "the evidence panel has numbers to show"))
+        checks.append(note("(the evidence panel has bench numbers to show.)"))
 
     pitch = os.path.join(HERE, "PITCH.md")
     claim = ""
     if os.path.exists(pitch):
         with open(pitch) as fh:
             claim = fh.read()
-    checks.append(Check(bool(re.search(r"\d", claim)),
-                        "PITCH.md, whole file: some line carries a number "
-                        "(the 'Number:' line is where it belongs)",
-                        hint="One number, its unit, and its denominator. "
-                             "'$0.11 per resolved contact, 5 shapes, 3 runs each'."))
+    # Substance, not shape. This used to pass on any digit anywhere in the file,
+    # `Next: v2` included, while the hint asked for a unit and a denominator.
+    number_line = NUMBER_LINE_RE.search(claim)
+    figure = (number_line.group(1).strip().strip("*").strip() if number_line else "")
+    if figure.startswith("<"):
+        figure = ""
+    missing = []
+    if not re.search(r"\d", figure):
+        missing.append("a figure")
+    if not UNIT_RE.search(figure):
+        missing.append("a unit (dollars, seconds, tokens, a percent)")
+    if not DENOM_RE.search(figure):
+        missing.append("a denominator (per what: per contact, per shape, n=)")
+    shown = figure if len(figure) <= 56 else figure[:55].rsplit(" ", 1)[0] + " …"
+    checks.append(Check(
+        not missing,
+        "PITCH.md: the 'Number:' line carries a figure, a unit and a denominator%s"
+        % (" (%s)" % shown if figure and not missing else ""),
+        hint=("The 'Number:' line is %s. It needs %s. A figure on its own is not a "
+              "claim: '$0.0234 per resolved contact, 5 shapes, 3 runs each' is, "
+              "because somebody can check every part of it."
+              % ("missing" if not number_line else "there but incomplete",
+                 " and ".join(missing) or "all three"))))
     checks.append(Check(len(claim.split()) >= 40,
                         "PITCH.md, whole file: more than the shipped template (%d words, "
                         "floor is 40)" % len(claim.split()),
-                        hint="The template ships at 27 words, so this fails until the six "
+                        hint="The template ships at 36 words, so this fails until the six "
                              "lines are answered in your own words. Built, Does, Number, "
                              "Guardrail, Next, Still broken."))
     # Sh2, and it is scored, not suggested: a line naming one thing that still
@@ -746,21 +901,61 @@ def step_7(args) -> List[Check]:
     # never disagree with what run.py --show-tools prints on the same file.
     assemble = getattr(agent, "tool_list", None)
     offered = list(assemble() or []) if callable(assemble) else tools
-    checks.append(Check(True, "(that probe cost %s tokens in across %d tool call(s), the %s "
-                              "tool is not free, and this is the number that says what it "
-                              "cost)"
-                        % ("{:,}".format((summary.get("tokens") or {}).get("input", 0) or 0),
-                           summary.get("tool_calls", 0) or 0, _ordinal(len(offered)))))
+    schema_total, _per, how = _schema_tax(offered)
+    checks.append(note("(that probe cost %s tokens in across %d tool call(s)%s. The %s tool is "
+                       "not free: the schemas alone are %s tokens on every turn, %s. "
+                       "python3 run.py --tool-tax prints them one by one.)"
+                       % ("{:,}".format((summary.get("tokens") or {}).get("input", 0) or 0),
+                          summary.get("tool_calls", 0) or 0, _cache_aside(summary),
+                          _ordinal(len(offered)), "{:,}".format(schema_total), how)))
     # Banked so gate 2.2 can say whether moving the tool onto a server changed
-    # what it costs. It does not, and that is the point.
+    # what it costs. It does not, and that is the point. The schema count and
+    # the names are banked with it, because 2.2 compares the LIST, and a live
+    # token count moves with sampling while a schema count does not.
     try:
         os.makedirs(os.path.dirname(BUILD2_TOKENS), exist_ok=True)
         with open(BUILD2_TOKENS, "w") as fh:
             json.dump({"tokens_in": (summary.get("tokens") or {}).get("input", 0) or 0,
-                       "tool_calls": summary.get("tool_calls", 0) or 0}, fh)
+                       "tool_calls": summary.get("tool_calls", 0) or 0,
+                       "schema_tokens": schema_total,
+                       "schema_how": how,
+                       "tool_names": [t.get("name") for t in offered]}, fh)
     except OSError:
         pass  # a missing before-number degrades gate 2.2, it never blocks it
     return checks
+
+
+def _cache_aside(summary) -> str:
+    """`tokens in` is reported exclusive of the cache columns, so on a warm
+    prefix it can come back SMALLER than the schemas that went out. Say so in
+    the same breath, or the two numbers on this line look like a contradiction.
+    """
+    tokens = summary.get("tokens") or {}
+    read = tokens.get("cache_read") or 0
+    if not read:
+        return ""
+    return (", with another %s read from cache and billed separately"
+            % "{:,}".format(read))
+
+
+def _schema_tax(tools) -> tuple:
+    """(total tokens the schemas cost on every turn, per tool, how it was got).
+
+    Deterministic where the token counter answers, which is the point: what a
+    tool list costs is a property of the list, not of what the model chose to do
+    on one sampled conversation.
+    """
+    from support import MODEL
+    from support.trace import tool_schema_tokens
+    client = None
+    try:
+        from support import get_client
+        client = get_client()
+    except Exception:  # noqa: BLE001 - an estimate that says so beats no number
+        client = None
+    total, per, how = tool_schema_tokens(tools, client, MODEL if client else None)
+    return total, per, ("counted on the wire" if how == "counted"
+                        else "estimated from the JSON, not counted")
 
 
 def step_2_2(args) -> List[Check]:
@@ -847,33 +1042,49 @@ def step_2_2(args) -> List[Check]:
                              "restart nothing, re-run."))
     checks.append(Check(bool(result), "returned a non-empty string"))
 
-    # 4. The measurement, and it is a print, not a gate. Same schema, same tax
-    # but sampling moves turns around, and a gate that fails on a turn the
-    # model chose to take teaches the wrong lesson.
+    # 4. The measurement, and it is a print, not a gate. It used to assert
+    # "same schema, same tax" unconditionally, against a +9.6% move inside a
+    # 10% band: a tolerance set to the same magnitude as the real effect cannot
+    # separate "changed hands" from "grew by a tool". So the claim is measured
+    # instead, on the schemas rather than on a sampled conversation: the tool
+    # list is what it is, and counting it does not move run to run.
     summary = tracer.summary() if tracer else {}
-    after = (summary.get("tokens") or {}).get("input", 0) or 0
-    before = None
+    live_after = (summary.get("tokens") or {}).get("input", 0) or 0
+    banked = {}
     try:
         with open(BUILD2_TOKENS) as fh:
-            before = json.load(fh).get("tokens_in") or None
+            banked = json.load(fh) or {}
     except (OSError, ValueError):
-        before = None
-    if before:
-        delta = after - before
-        noise = max(200, int(before * 0.10))
-        verdict = "inside" if abs(delta) <= noise else "outside"
-        checks.append(Check(True,
-                            "(tokens in: %s at 2.1, %s here, %+d: %s the +/- %d noise band. "
-                            "Same schema, same tax. A jump up means the tool list GREW "
-                            "rather than changed hands; --show-tools says which, in one "
-                            "screen.)"
-                            % ("{:,}".format(before), "{:,}".format(after), delta,
-                               verdict, noise)))
+        banked = {}
+
+    schema_after, _per, how = _schema_tax(offered_list)
+    schema_before = banked.get("schema_tokens")
+    names_before = set(banked.get("tool_names") or [])
+    added = sorted(set(offered) - names_before) if names_before else []
+    dropped = sorted(names_before - set(offered)) if names_before else []
+
+    if schema_before:
+        delta = schema_after - schema_before
+        if added or dropped:
+            because = "+%d for %s" % (delta, ", ".join(added)) if added else \
+                "%+d, and %s left the list" % (delta, ", ".join(dropped))
+        else:
+            because = "%+d, and the list is the same names it was" % delta
+        checks.append(note(
+            "(schema tokens on every turn: %s at 2.1, %s here, %s. Tokens in moved by "
+            "what the server offers (%s), not by the transport. %s.)"
+            % ("{:,}".format(schema_before), "{:,}".format(schema_after), because,
+               ", ".join(added) or "no new names", how)))
     else:
-        checks.append(Check(True, "(no banked token count from 2.1, so the "
-                                  "same-schema-same-tax comparison is skipped. This probe "
-                                  "cost %s tokens in across %d tool call(s).)"
-                            % ("{:,}".format(after), summary.get("tool_calls", 0) or 0)))
+        checks.append(note(
+            "(no banked schema count from 2.1, so there is nothing to compare against. "
+            "The schemas on the wire here are %s tokens on every turn, %s.)"
+            % ("{:,}".format(schema_after), how)))
+    checks.append(note(
+        "(this probe cost %s tokens in across %d tool call(s)%s. That figure moves run to "
+        "run with what the model chose to do; the schema count above does not.)"
+        % ("{:,}".format(live_after), summary.get("tool_calls", 0) or 0,
+           _cache_aside(summary))))
     return checks
 
 
@@ -919,8 +1130,9 @@ def _resolve_name(profile: dict, name: Optional[str]) -> str:
     if profile.get("name"):
         return profile["name"]
     try:
-        return input("Your name, for the evidence code (gate 3.1 also looks for it on your "
-                     "eval case): ").strip()
+        return input("Your name, the same name you typed on the build site, because the "
+                     "code is minted from it (gate 3.1 also looks for it on your eval "
+                     "case): ").strip()
     except (EOFError, KeyboardInterrupt):
         print()
         return ""
@@ -962,13 +1174,15 @@ def run_step(raw: str, name: Optional[str]) -> int:
         return 1
 
     failed = [c for c in checks if not c.passed]
+    graded = [c for c in checks if not c.note]
     for c in checks:
-        print("  %s %s" % ("✓" if c.passed else "✗", c.label))
+        print("  %s %s" % ("·" if c.note else ("✓" if c.passed else "✗"), c.label))
         if not c.passed and c.hint:
             print("      → %s" % c.hint)
 
     if failed:
-        print("\n%d/%d checks failed. Fix the ✗ lines above, then re-run." % (len(failed), len(checks)))
+        print("\n%d/%d checks failed. Fix the ✗ lines above, then re-run."
+              % (len(failed), len(graded)))
         return 1
 
     if not name:
@@ -983,11 +1197,13 @@ def run_step(raw: str, name: Optional[str]) -> int:
         flagged = set(profile.get("banked_from_checkpoint", []))
         flagged.add(number)
         profile["banked_from_checkpoint"] = sorted(flagged)
-        print("\n  (This ran on code you loaded with catchup.py. Banked, and recorded as")
-        print("   loaded rather than built. That's for the facilitator, not a penalty.)")
+        print("\n  (This ran on code you loaded with --take-canon --force. Banked, and")
+        print("   recorded as loaded rather than built. Nobody is scored down for it.)")
     _save_profile(profile)
-    print("\nAll checks passed. Evidence code: %s" % code)
-    print("That code is your receipt for step %s. Nothing to upload." % number)
+    print("\nAll checks passed. Evidence code: %s   (banked for \"%s\")" % (code, name))
+    print("That code is your receipt for step %s. Paste it into the build site to bank "
+          "it. Nothing to upload." % number)
+    print(BUILD_SITE)
 
     # Non-blocking, and only where a build actually ends: 1.4, 2.1, 2.2, 3.1 and
     # 4.1 are the steps that finish a build, and each is a moment where the pod's

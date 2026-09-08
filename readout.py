@@ -4,6 +4,15 @@
     python3 readout.py                          # uses .workshop/last_trace.json
     python3 readout.py --trace path/to.json     # any saved trace
     python3 readout.py --open                   # write it and open in the browser
+    python3 readout.py --client                 # the same evidence, in client language
+
+TWO PAGES, ONE SET OF NUMBERS. The default page is for an engineer: tools,
+turns, tokens, stop_reason. `--client` writes readout-client.html from exactly
+the same files, for the person who signs. It carries what the agent does, what
+it is fenced from doing, what is proved and by which gate, what is not measured
+yet, your own `Still broken:` line, and your named account. It invents nothing:
+every sentence on it is either sourced from the code, banked in .workshop/, or
+typed by you into PITCH.md and ACCOUNT.md.
 
 Two halves, one self-contained HTML file, readout.html at the repo root:
 
@@ -39,6 +48,7 @@ import argparse
 import html
 import json
 import os
+import re
 import sys
 import time
 import webbrowser
@@ -53,8 +63,123 @@ LAST_RUN_PATH = os.path.join(HERE, ".workshop", "last_run.json")
 # The readout is the pod's submission: it lives at the repo ROOT (committed and
 # pushed, unlike .workshop/, which is gitignored). Pushing it IS submitting it.
 OUT_PATH = os.path.join(HERE, "readout.html")
+# The client half. Same data, different register, same directory, so the two
+# pages travel together when the pod pushes.
+OUT_CLIENT_PATH = os.path.join(HERE, "readout-client.html")
 PROFILE_PATH = os.path.join(HERE, ".workshop", "profile.json")
+PITCH_PATH = os.path.join(HERE, "PITCH.md")
+ACCOUNT_PATH = os.path.join(HERE, "ACCOUNT.md")
+EVALS_PATH = os.path.join(HERE, ".workshop", "evals.json")
 GIVEN_TOOL_COUNT = 9  # the nine shipped schemas; anything past this is yours
+
+
+# ---------------------------------------------------------------------------
+# The claims dictionary
+# ---------------------------------------------------------------------------
+# Gate id -> the one sentence a client hears. This is the only place in the
+# repo where a banked gate becomes client language, and it is deliberately
+# narrow: every sentence is a statement about behaviour that the gate actually
+# read on the wire. No accuracy, no dollars, no "reliable", no "production
+# ready". A gate that banked on a BLOCKED release still gets an honest
+# sentence, because "we ran the suite and it blocked" is a stronger claim than
+# a green dashboard.
+#
+# If you are tempted to make one of these bigger, read what the gate checks
+# first. The gate is the warrant for the sentence; the sentence cannot outrun
+# it.
+CLAIMS = {
+    "1.2": "The agent finishes a conversation that needs several system "
+           "lookups, instead of stopping halfway through and going quiet.",
+    "1.3": "The agent works out which of your systems to ask, and in what "
+           "order, without being told which one holds the answer.",
+    "1.4": "The same agent handled five different disruption shapes, "
+           "including the two where the correct outcome is to refuse and "
+           "hand to a person.",
+    "2.1": "We added a capability your customers ask for every storm day, and "
+           "the agent reached for it unprompted on a message that never "
+           "named it.",
+    "2.2": "That capability now runs as a service of its own, so your team "
+           "can version and reuse it without anyone touching the agent.",
+    "3.1": "There is an instrument. We wrote eval cases with named authors, "
+           "made two of them release-blocking, and ran them against this "
+           "agent.",
+    "4.1": "We declared one number before we touched anything, changed one "
+           "thing, and measured the same set again on the same laptop.",
+}
+
+# The same seven, at four words each, for the demo panel's gate dots. Kept
+# beside CLAIMS on purpose: if a sentence above changes, the dot label changes
+# with it. demo/index.html carries a copy of this map and names this file.
+CLAIMS_SHORT = {
+    "1.2": "Completes the whole conversation",
+    "1.3": "Asks the right system",
+    "1.4": "Handles five case shapes",
+    "2.1": "Reaches for new capability",
+    "2.2": "Capability runs as service",
+    "3.1": "Eval cases, authored, run",
+    "4.1": "One declared number moved",
+}
+
+GATE_ORDER = ["1.2", "1.3", "1.4", "2.1", "2.2", "3.1", "4.1"]
+
+# What no gate in this build measures, whatever your numbers say. The first
+# four are true of every pod on every run; the conditional ones are added by
+# not_measured() when the evidence for them is missing.
+NOT_MEASURED_ALWAYS = [
+    "Accuracy at volume. Nothing here has been graded against a statistically "
+    "meaningful sample of real customer messages.",
+    "Real customer traffic. Every run in this pack is against fixture data on "
+    "a laptop, not against your live contact center.",
+    "Loaded cost. Any dollar figure here is model cost only. Larkspur's loaded "
+    "cost per resolved contact ran about 40% above its model cost once "
+    "infrastructure and evals were counted.",
+    "Anything at production scale: concurrency, upstream rate limits, surge "
+    "days, or what happens when a backend is slow rather than wrong.",
+]
+
+# Appendix D of the Build Guide, word for word, because the fence table is the
+# strongest document this build produces and a client should see one wording of
+# it, not two. Sourced from support/tools.py and
+# data/americas/disruption_policy.json.
+FENCE_READS = [
+    ("lookup_booking",
+     "Takes a PNR and a last name, and refuses if the name is not on that "
+     "booking. Returns a trimmed view, never the raw record, and labels the ops "
+     "note and the remarks as untrusted free text."),
+    ("get_flight_status",
+     "Takes a flight number and a date. The one read not fenced to the "
+     "customer's own booking, so it is the one that can be pointed anywhere."),
+    ("search_alternatives",
+     "Takes the PNR alone, so it can never be pointed at a route the customer "
+     "did not buy."),
+    ("check_policy",
+     "Re-derives fare family, loyalty tier and whether this is an overnight "
+     "from the booking on every call, so a model cannot talk its way into an "
+     "entitlement the data does not support."),
+]
+
+FENCE_WRITES = [
+    ("hold_seat",
+     "Puts a seat aside and hands back a hold that expires in 15 minutes.",
+     "Reversible, and it undoes itself if nobody confirms."),
+    ("issue_voucher",
+     "Issues on its own only under the policy threshold: 25 dollars for a meal, "
+     "40 for ground, 75 for goodwill.",
+     "A hotel is never automatic, and anything over the line queues for a "
+     "human."),
+    ("confirm_rebooking",
+     "Reissues the ticket. The irreversible one.",
+     "Only with the customer's own click token. \"The customer said yes\" in "
+     "chat is not it."),
+    ("send_confirmation",
+     "Writes the message the customer actually reads.",
+     "The only write with no threshold and no token, so it carries whatever "
+     "the agent got wrong."),
+    ("escalate_to_human",
+     "Files the case with a written summary for whoever picks it up.",
+     "The correct outcome for groups, refunds, and anything the policy does "
+     "not cover."),
+]
 
 
 # ---------------------------------------------------------------------------
@@ -89,7 +214,7 @@ def read_architecture() -> dict:
     # is `via mcp`, a name in EXTRA_TOOLS is `yours`, everything else is given.
     # This is a set membership test, not a position test: an index-based guess
     # mislabels the moment a tool moves onto the server.
-    over_mcp = {t["name"] for t in (getattr(agent, "MCP_TOOLS", []) or [])}
+    over_mcp = {t["name"] for t in (getattr(agent, "_MCP_CACHE", []) or [])}
     extra_names = {t.get("name") for t in extra}
     for t in offered:
         desc = t.get("description", "") or ""
@@ -156,6 +281,106 @@ def read_banked() -> dict:
         return {"name": None, "banked": {}}
     return {"name": profile.get("name"),
             "banked": profile.get("banked") or {}}
+
+
+def read_pitch() -> dict:
+    """PITCH.md, parsed by its labels rather than dumped whole.
+
+    The labels are the contract: verify.py reads `Still broken:` and `Lever:`
+    by name, so anything that parses this file has to be as forgiving about
+    markdown as the gates are. Same shape of regex, same reason: people write
+    `**Lever:** cost` and `- Still broken: the tone gate`.
+    """
+    labels = ["Built", "Does", "Number", "Guardrail", "Next", "Still broken",
+              "Lever", "Costs", "Wrong", "Runs it", "Left out"]
+    out = {}
+    try:
+        with open(PITCH_PATH) as f:
+            body = f.read()
+    except OSError:
+        return out
+    for label in labels:
+        pattern = (r"^[ \t>*_-]*\**[ \t]*%s\**[ \t]*:[ \t]*\**[ \t]*(\S.*?)\**[ \t]*$"
+                   % label.replace(" ", r"[ _-]?"))
+        match = re.search(pattern, body, re.M | re.I)
+        if match:
+            value = match.group(1).strip()
+            # The shipped Lever: line is a menu, not a choice. An unfilled line
+            # is not an answer, and putting one on a client page is worse than
+            # leaving the row out.
+            if value.startswith("<") and value.endswith(">"):
+                continue
+            out[label] = value
+    out["_raw"] = body
+    return out
+
+
+def read_account() -> dict:
+    """The three lines of ACCOUNT.md, or {} if nobody filled them in.
+
+    An unfilled field is left out rather than rendered empty: a client page
+    with a blank Account row on it says the pod did not do the one thing only
+    they could do, in front of the person it was for.
+    """
+    out = {}
+    try:
+        with open(ACCOUNT_PATH) as f:
+            body = f.read()
+    except OSError:
+        return out
+    for label in ("Account", "Workflow", "Date"):
+        match = re.search(r"^[ \t>*_-]*\**[ \t]*%s\**[ \t]*:[ \t]*\**[ \t]*(\S.*?)\**[ \t]*$"
+                          % label, body, re.M | re.I)
+        if match:
+            out[label] = match.group(1).strip()
+    return out
+
+
+def read_evals() -> dict:
+    """The last eval_harness run, or {}. Used only to say whether an
+    instrument exists, never to state a pass rate as a quality claim."""
+    try:
+        with open(EVALS_PATH) as f:
+            payload = json.load(f)
+    except (OSError, ValueError):
+        return {}
+    return payload.get("report") or {}
+
+
+def read_bench() -> dict:
+    """The before/after pair, if both exist. Read for one purpose: deciding
+    whether this page is allowed to put a dollar figure on itself."""
+    out = {}
+    for label in ("before", "after"):
+        path = os.path.join(HERE, ".workshop", "bench-%s.json" % label)
+        try:
+            with open(path) as f:
+                doc = json.load(f)
+        except (OSError, ValueError):
+            continue
+        out[label] = doc.get("summary") or {}
+    return out
+
+
+def not_measured(evals: dict, bench: dict, banked: dict) -> list:
+    """The always-true list, plus whatever this laptop has no evidence for.
+
+    Absence is the finding. A page that quietly omits "we never ran the eval
+    suite" is the page that gets a pod caught in the room.
+    """
+    items = list(NOT_MEASURED_ALWAYS)
+    if not evals:
+        items.append("Whether any answer was correct. There is no eval run on "
+                     "this laptop, so nothing here has graded the agent's "
+                     "output at all.")
+    if not (bench.get("before") and bench.get("after")):
+        items.append("Cost and speed. There is no before-and-after bench pair "
+                     "on this laptop, so any number about dollars or latency "
+                     "would be a guess.")
+    if "1.4" not in banked:
+        items.append("Whether the loop generalizes past one ticket. The "
+                     "five-shape gate has not banked here.")
+    return items
 
 
 def _from_sweep(trace: dict, last_run: dict):
@@ -416,12 +641,266 @@ def render(arch: dict, trace: dict, pod: str, trace_path: str, evidence: dict,
 
 # ---------------------------------------------------------------------------
 
+CLIENT_CSS = """
+body { font: 15.5px/1.62 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #faf7f2; color: #262220; margin: 0; padding: 40px 28px 72px; }
+.page { max-width: 780px; margin: 0 auto; }
+h1 { font-size: 27px; margin: 0 0 3px; letter-spacing: -.01em; }
+h1 em { color: #b4562e; font-style: italic; }
+h2 { font-size: 13px; letter-spacing: .1em; text-transform: uppercase;
+  color: #b4562e; margin: 38px 0 12px; }
+.sub { color: #75695f; margin: 0 0 6px; font-size: 13.5px; }
+.lede { font-size: 17px; line-height: 1.6; margin: 0 0 4px; }
+table { border-collapse: collapse; width: 100%; background: #fff;
+  border: 1.5px solid #e5dccf; border-radius: 8px; overflow: hidden; }
+th, td { text-align: left; padding: 9px 13px; border-bottom: 1px solid #efe8dc;
+  font-size: 13.5px; vertical-align: top; }
+th { background: #f4eee4; font-size: 11.5px; letter-spacing: .05em;
+  text-transform: uppercase; color: #75695f; }
+tr:last-child td { border-bottom: none; }
+.pill { display: inline-block; background: #f0e7d9; border-radius: 999px;
+  padding: 1px 9px; font-family: ui-monospace, Menlo, monospace; font-size: 12px;
+  white-space: nowrap; }
+.gate { display: flex; gap: 12px; align-items: baseline; background: #fff;
+  border: 1.5px solid #e5dccf; border-left: 5px solid #3d7a52; border-radius: 8px;
+  padding: 11px 15px; margin: 0 0 6px; }
+.gate .id { font-family: ui-monospace, Menlo, monospace; font-size: 12.5px;
+  color: #3d7a52; font-weight: 700; flex: 0 0 34px; }
+.gate .txt { flex: 1; }
+.gate .short { display: block; color: #75695f; font-size: 12px; margin-top: 3px;
+  letter-spacing: .04em; text-transform: uppercase; }
+ul.plain { margin: 0; padding-left: 20px; }
+ul.plain li { margin-bottom: 7px; }
+.warn { background: #fdf3ec; border: 1.5px solid #eac9ae; border-radius: 8px;
+  padding: 12px 15px; color: #8a4a22; font-size: 14px; }
+.broken { background: #fff; border: 1.5px solid #e5dccf; border-left: 5px solid #b4562e;
+  border-radius: 8px; padding: 13px 16px; font-size: 15px; }
+.broken b { display: block; font-size: 11.5px; letter-spacing: .1em;
+  text-transform: uppercase; color: #b4562e; margin-bottom: 4px; }
+.acct { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 2px; }
+.acct div { background: #fff; border: 1.5px solid #e5dccf; border-top: 4px solid #b4562e;
+  border-radius: 8px; padding: 10px 16px; min-width: 150px; }
+.acct span { display: block; color: #75695f; font-size: 11.5px; letter-spacing: .05em;
+  text-transform: uppercase; margin-bottom: 3px; }
+.acct b { font-size: 15px; font-weight: 700; }
+.foot { color: #a2968b; font-size: 12px; margin-top: 44px; }
+"""
+
+
+def client_lede(arch: dict, pitch: dict) -> str:
+    """One paragraph, in the client's words, about what this agent does.
+
+    The first sentence is the pod's own `Does:` line if they wrote one, because
+    nothing this script can generate beats the sentence they will actually say
+    out loud. The rest is counted from agent.py, so the paragraph cannot claim a
+    capability the file does not offer.
+    """
+    n_tools = len(arch["tools"])
+    parts = []
+    does = pitch.get("Does")
+    if does:
+        parts.append(does.rstrip(".") + ".")
+    else:
+        parts.append("This agent handles a Larkspur disruption chat: it reads the "
+                     "customer's own booking, checks the flight, derives what they "
+                     "are entitled to from Larkspur's policy table, and offers "
+                     "alternatives it can hold while they decide.")
+    if n_tools:
+        line = ("It reaches flight status, reservations and the policy table through "
+                "%d named tools, one tool per thing it is allowed to ask for" % n_tools)
+        if arch["mcp_tools"]:
+            line += (", and %d of those %d run in a separate program your own team can "
+                     "version and reuse" % (arch["mcp_tools"], n_tools))
+        parts.append(line + ".")
+    parts.append("It is chat only. Voice, refunds and partner-airline segments are "
+                 "out of scope by agreement, and it hands those to a person with the "
+                 "conversation attached.")
+    return " ".join(parts)
+
+
+def render_client(arch: dict, pod: str, evidence: dict, pitch: dict, account: dict,
+                  evals: dict, bench: dict, last_run: dict) -> str:
+    banked = evidence.get("banked") or {}
+    out = ["<!doctype html><meta charset='utf-8'>"]
+    out.append("<title>Larkspur disruption agent%s</title>"
+               % (": " + esc(pod) if pod else ""))
+    out.append("<style>%s</style><div class='page'>" % CLIENT_CSS)
+    out.append("<h1>The disruption agent, <em>in plain terms.</em></h1>")
+    who = "Pod %s · " % esc(pod) if pod else ""
+    if evidence.get("name"):
+        who += "%s · " % esc(evidence["name"])
+    out.append("<p class='sub'>%s%s</p>" % (who, time.strftime("%Y-%m-%d %H:%M")))
+
+    # -- what it does ---------------------------------------------------------
+    out.append("<h2>What it does</h2>")
+    out.append("<p class='lede'>%s</p>" % esc(client_lede(arch, pitch)))
+    if arch["error"]:
+        out.append("<p class='warn'>agent.py could not be fully read on this laptop, "
+                   "so the tool counts above are incomplete. Regenerate this page "
+                   "before you show it to anybody.</p>")
+
+    # -- what it cannot do ----------------------------------------------------
+    out.append("<h2>What it cannot do, and what stops it</h2>")
+    out.append("<p class='sub'>The page to hand a CIO. Every line is sourced from the "
+               "code and the policy table, not from a slide. Reads first, then the "
+               "five things it can change and the fence on each.</p>")
+    out.append("<table><tr><th>Reads</th><th>What it does</th></tr>")
+    for name, what in FENCE_READS:
+        out.append("<tr><td><span class='pill'>%s</span></td><td>%s</td></tr>"
+                   % (esc(name), esc(what)))
+    out.append("</table>")
+    out.append("<table style='margin-top:12px'><tr><th>Writes</th><th>What it does</th>"
+               "<th>The fence</th></tr>")
+    for name, what, fence in FENCE_WRITES:
+        out.append("<tr><td><span class='pill'>%s</span></td><td>%s</td><td>%s</td></tr>"
+                   % (esc(name), esc(what), esc(fence)))
+    out.append("</table>")
+
+    # -- what is proved -------------------------------------------------------
+    out.append("<h2>What is proved, and by which check</h2>")
+    proved = [g for g in GATE_ORDER if g in banked]
+    if proved:
+        out.append("<p class='sub'>%d of %d checks banked on this laptop. Each check reads "
+                   "what the agent did on the wire, not how it was written, so the sentence "
+                   "beside it is the widest claim that check supports.</p>"
+                   % (len(proved), len(GATE_ORDER)))
+        for gate in proved:
+            out.append("<div class='gate'><span class='id'>%s</span><span class='txt'>%s"
+                       "<span class='short'>%s · evidence %s</span></span></div>"
+                       % (esc(gate), esc(CLAIMS[gate]), esc(CLAIMS_SHORT[gate]),
+                          esc(banked.get(gate) or "banked")))
+    else:
+        out.append("<p class='warn'>No checks have banked on this laptop, so there is "
+                   "nothing on this page anybody should treat as proved. Run "
+                   "<span class='pill'>python3 verify.py 1.2</span> and regenerate.</p>")
+    if evals:
+        blocking = evals.get("blocking_suites") or []
+        scored = evals.get("scored") or evals.get("cases")
+        out.append("<p class='sub'>The eval run behind check 3.1: %s of %s scored cases "
+                   "passed, release %s. A blocked release is a working instrument, and it "
+                   "is the reason this page can say what it says.</p>"
+                   % (esc(evals.get("passed", "?")), esc(scored),
+                      "BLOCKED by " + esc(", ".join(blocking)) if blocking else "clear"))
+
+    # -- what is not measured -------------------------------------------------
+    out.append("<h2>What is not measured yet</h2>")
+    out.append("<ul class='plain'>")
+    for item in not_measured(evals, bench, banked):
+        out.append("<li>%s</li>" % esc(item))
+    out.append("</ul>")
+    if bench.get("before") and bench.get("after"):
+        out.append("<p class='sub'>There is a before-and-after bench pair on this laptop. "
+                   "Whatever it says is model cost and laptop latency on fixture data. Put "
+                   "the caveat above on the same slide as the number.</p>")
+
+    # -- still broken ---------------------------------------------------------
+    broken = pitch.get("Still broken")
+    if broken:
+        out.append("<h2>What we are telling you before you find it</h2>")
+        out.append("<div class='broken'><b>Still broken</b>%s</div>" % esc(broken))
+
+    # -- the four questions ---------------------------------------------------
+    answered = [(q, pitch[key]) for key, q in
+                (("Costs", "What it costs"), ("Wrong", "When it is wrong"),
+                 ("Runs it", "Who runs it"), ("Left out", "What you left out"))
+                if pitch.get(key)]
+    if answered:
+        out.append("<h2>Your four questions</h2>")
+        out.append("<table><tr><th>You asked</th><th>Our answer</th></tr>")
+        for question, answer in answered:
+            out.append("<tr><td>%s</td><td>%s</td></tr>" % (esc(question), esc(answer)))
+        out.append("</table>")
+
+    # -- the account ----------------------------------------------------------
+    if account:
+        out.append("<h2>Where this goes next</h2>")
+        out.append("<div class='acct'>")
+        for label in ("Account", "Workflow", "Date"):
+            if account.get(label):
+                out.append("<div><span>%s</span><b>%s</b></div>"
+                           % (esc(label), esc(account[label])))
+        out.append("</div>")
+
+    out.append("<p class='foot'>Generated by readout.py --client from this repository's own "
+               "evidence · Larkspur Airlines is a fictional training scenario · "
+               "Confidential / do not distribute</p></div>")
+
+    payload = json.dumps({
+        "generated": time.strftime("%Y-%m-%dT%H:%M:%S"),
+        "pod": pod or None,
+        "banked_by": evidence.get("name"),
+        "banked": banked,
+        "claims": {g: CLAIMS[g] for g in proved},
+        "claims_short": {g: CLAIMS_SHORT[g] for g in proved},
+        "still_broken": broken or None,
+        "account": account or None,
+        "all_shapes": (last_run or {}).get("totals") or None,
+    }, default=str)
+    out.append("<script type=\"application/json\" id=\"evidence\">%s</script>"
+               % payload.replace("</", "<\\/"))
+    return "\n".join(out)
+
+
+def main_client(args) -> int:
+    """The client page. It needs no trace: it is a claim page, not a run page,
+    so it renders off the architecture, the banked gates and the pod's own
+    words. That is deliberate. A pod that has banked nothing gets a page that
+    says so, which is the most useful version of this page they could hold."""
+    out_path = args.out or OUT_CLIENT_PATH
+    arch = read_architecture()
+    pod = read_pod()
+    evidence = read_banked()
+    pitch = read_pitch()
+    account = read_account()
+    evals = read_evals()
+    bench = read_bench()
+    last_run = read_last_run()
+
+    page = render_client(arch, pod, evidence, pitch, account, evals, bench, last_run)
+    os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
+    with open(out_path, "w") as f:
+        f.write(page)
+
+    banked = sorted((evidence.get("banked") or {}).keys())
+    print("wrote %s" % os.path.relpath(out_path, HERE))
+    print("  claims on the page: %d of %d gates%s"
+          % (len(banked), len(GATE_ORDER),
+             (" (" + ", ".join(banked) + ")") if banked else " (none banked here yet)"))
+    for gate in GATE_ORDER:
+        if gate in banked:
+            print("    %-4s %s" % (gate, CLAIMS_SHORT[gate]))
+    print("  Still broken: %s" % (pitch.get("Still broken") or "NOT WRITTEN in PITCH.md"))
+    four = [k for k in ("Costs", "Wrong", "Runs it", "Left out") if pitch.get(k)]
+    print("  Priya's four questions: %d of 4 answered in PITCH.md%s"
+          % (len(four), (" (" + ", ".join(four) + ")") if four else ""))
+    if account:
+        print("  named account: %s"
+              % " · ".join("%s %s" % (k.lower(), account[k])
+                           for k in ("Account", "Workflow", "Date") if account.get(k)))
+    else:
+        print("  named account: ACCOUNT.md is empty. Three lines, and nobody else "
+              "can write them.")
+    print("  not measured yet: %d item(s) listed on the page"
+          % len(not_measured(evals, bench, evidence.get("banked") or {})))
+    if args.open:
+        webbrowser.open("file://" + os.path.abspath(out_path))
+    return 0
+
+
+# ---------------------------------------------------------------------------
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Render the agent architecture + loop readout.")
     parser.add_argument("--trace", default=DEFAULT_TRACE, help="saved trace JSON")
-    parser.add_argument("--out", default=OUT_PATH)
+    parser.add_argument("--out", default=None)
     parser.add_argument("--open", action="store_true", help="open the result in a browser")
+    parser.add_argument("--client", action="store_true",
+                        help="write readout-client.html: the same evidence, client language")
     args = parser.parse_args()
+
+    if args.client:
+        return main_client(args)
+    args.out = args.out or OUT_PATH
 
     if not os.path.exists(args.trace):
         print("No trace at %s" % os.path.relpath(args.trace, HERE))

@@ -48,6 +48,29 @@ question in the room, and it is worth more than either fix. Never let one
 person drive while the others watch; if a pod nominates a driver, say so and
 send everyone back to their own file.
 
+**The pod has five seats and they rotate every build.** `ROLES.md` is the
+table, `TEAM.md` is the roster, and its order is the seat order:
+`python3 pod_sync.py --status --build 2` prints who sits where. The seats are
+committer (pushes the canon), reader (reads the step aloud and keeps the pod on
+the Do list), trace-caller (runs `--trace` and reads the wire out loud, given
+to the least confident person on purpose), typist (edits `agent.py` on the
+shared screen when the pod pairs), and client chair (writes the question a
+client would ask about what just changed, before the gate banks). If someone
+names their seat, coach that seat:
+
+- **Trace-caller.** Do not read the trace for them. Ask what turn 2 shows and
+  let the silence sit. Their job is to say it out loud, and that is the skill.
+- **Client chair.** Coach them to ask, never to code. They own the 1.4 claim,
+  the 2.1 probe sentence, the 3.1 case with their own name in `author`, the 4.1
+  caveat and the pitch. Every one of those is a sentence about the customer, so
+  push on whether a client would recognise it, and do not draft it for them. If
+  they ask to be shown `agent.py` instead, that is their call, but say what their
+  own line still needs first.
+- **Reader.** If the pod is solving item 5 while item 2 is unbuilt, say so to
+  the reader rather than to the room.
+- **Committer.** One canon push per build. If they are not this build's
+  committer, give them `--take-canon` and say who is.
+
 So:
 
 1. **Ask what THEY think the step has to do, in their words, before you write

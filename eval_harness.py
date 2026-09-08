@@ -44,6 +44,24 @@ must pass for the case to pass:
 Larkspur's week 8: one suite fell to 37 of 48 overnight and nine of eleven
 failures were the grader, not the agent. Fixed in 40 minutes, no rollback. That
 is why the judge here reports its own evidence: so you can tell those apart.
+
+THE JUDGE MODEL, and why it is not the agent's. Never let a model grade its own
+output. A judge on the same model id as the thing it is grading shares the
+blind spot that produced the answer: it reads its own phrasing as correct,
+because that is the phrasing it would have chosen. So JUDGE_MODEL defaults to
+claude-opus-4-8 while the agent runs on support/data.py's MODEL, a different
+tier. Up rather than down, on purpose: a judge has to be able to catch a fluent
+answer that contradicts a tool result, and a cheaper judge than the agent is a
+grader you cannot appeal to. It costs more per case and it is slower, which is
+the judge grader's charge and is worth naming out loud.
+
+Swapping it is one environment variable, and doing so is the fastest way to see
+what a rubric actually rests on:
+
+    LARKSPUR_JUDGE_MODEL=claude-haiku-4-5 python3 eval_harness.py
+
+Diff the verdicts against the default run and write one line on which cases
+moved. A rubric that survives a judge swap is a rubric.
 """
 
 from __future__ import annotations
@@ -61,7 +79,7 @@ WORKSHOP = os.path.join(HERE, ".workshop")
 CASES_PATH = os.path.join(HERE, "evals", "cases.json")
 EXAMPLE_PATH = os.path.join(HERE, "evals", "cases.example.json")
 
-JUDGE_MODEL = os.environ.get("LARKSPUR_JUDGE_MODEL", "claude-sonnet-5")
+JUDGE_MODEL = os.environ.get("LARKSPUR_JUDGE_MODEL", "claude-opus-4-8")
 RUBRIC_VERSION = "v2"   # v1 over-specified grnd-0101; see evals/GRADER-BUG.md
 
 VERDICT_SCHEMA = {
@@ -139,7 +157,12 @@ def grade_lexicon(spec, transcript) -> dict:
     }
 
 
-EVIDENCE_CHAR_CAP = 4000   # the whole tool-evidence block, not per call
+# The whole tool-evidence block, not per call. Two fences, and they are set in
+# the right order now: support/trace.py caps each recorded result at grader
+# length, and this caps the block. It was 4,000 while a single result could be
+# 4,000, which meant one large policy row could push every later call off the
+# end of the evidence the judge was shown.
+EVIDENCE_CHAR_CAP = 12000
 
 
 def tool_evidence(transcript, cap: int = EVIDENCE_CHAR_CAP) -> str:
@@ -149,6 +172,12 @@ def tool_evidence(transcript, cap: int = EVIDENCE_CHAR_CAP) -> str:
     policy row said. Shown the results, it can catch the case that matters most:
     a fluent reply that contradicts the data it was handed. Capped, because a
     judge prompt is a cost line too.
+
+    `result_full` is the grader's copy, recorded at grader length by
+    support/trace.py. `result` is what the trace prints, and a page-layout
+    number has no business deciding whether the judge can see the entitlement it
+    was asked to verify. Falls back to `result` for a trace recorded before the
+    two lengths existed.
     """
     calls = transcript.get("tool_calls") or []
     if not calls:
@@ -158,7 +187,7 @@ def tool_evidence(transcript, cap: int = EVIDENCE_CHAR_CAP) -> str:
         args = json.dumps(call.get("input") or {}, default=str)
         if len(args) > 200:
             args = args[:199] + "…"
-        result = call.get("result")
+        result = call.get("result_full") or call.get("result")
         if result is None:
             result = "(result not captured)"
         line = "%d. %s(%s)\n   -> %s" % (i, call.get("name", "?"), args, result)

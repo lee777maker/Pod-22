@@ -10,6 +10,35 @@ All files agree that "now" is **Thursday 8 May 2025, 2:10 pm MDT** (`2025-05-08T
 
 `bookings.json` carries the clock as `fixture_clock`; `alternatives_cache.json` carries `as_of` 90 seconds earlier. Tools that need "now" (hold TTLs, "departs in N minutes", staleness caveats) read `fixture_clock` unless an eval case overrides it.
 
+## Annual volume, and how it is derived
+
+Nothing in this folder is an annual figure: `bookings.json` holds 25 bookings and `transcripts_sample.jsonl` holds 8 transcripts out of the 600 discovery read by hand. The numbers below are the case's own annual figures, written down here so the guide, the Build 4 annualisation box and anybody answering Marcus's "per year, at our volume" are all quoting one arithmetic instead of three.
+
+| Figure | Value |
+|---|---|
+| Passengers a year | 19,000,000 |
+| Contacts a year | about 4,200,000 |
+| Disruption contacts a year (31% of contacts) | about 1,300,000 |
+| Disruption **chats** a year (41% of contacts are chat) | about 530,000 |
+| Of those, the agent's reachable share (58%) | about 307,000 |
+
+The chain, in order:
+
+1. **19,000,000 passengers a year** and **1,150 contact-center people**: the case, first line.
+2. **0.22 contacts per passenger** gives **4,200,000 contacts a year**. This is the one input the pack does not contain. For a US domestic carrier with app self-service the published band runs about 0.15 to 0.35 contacts per passenger, and 0.22 sits low-middle because Larkspur already deflects status checks to the app. If a client argues the rate, argue the rate, not the rest of the chain.
+3. **Disruption is 31% of contacts**: `4,200,000 x 0.31 = 1,302,000`, called **1,300,000 disruption contacts a year**.
+4. **Chat is 41% of contacts.** The case's out-of-scope table says "59% of contacts are not chat", so `1,300,000 x 0.41 = 533,000`, called **530,000 disruption chats a year**. That is the agent's in-scope pool: the scope was signed chat only, voice refused in week 1.
+5. **Humans still take 42% of in-scope chats**, so the agent path reaches at most 58%: `530,000 x 0.58 = 307,400`, called **307,000 resolved contacts a year**.
+
+Two cross-checks, because a number with no cross-check is a guess with a comma in it.
+
+- **Against the case's own booked saving.** At $6.90 a human contact and about $0.14 loaded per resolved contact, the full-year gap on 307,000 contacts is `307,000 x 6.76 = $2,075,000`. Larkspur ran week 12 at 50% of eligible disruption chat, across roughly a four-and-a-half-month storm season: `0.50 x 0.375 x 2,075,000 = $389,000`. The case books that saving as 60 seasonal BPO seats not bought, **about $410,000**. Within 5%, from the other end, having never used the seat figure to get here.
+- **Against headcount, which bounds it rather than confirming it.** `4,200,000 x $6.90 = $29,000,000` of human contact handling across 1,150 people, about $25,000 a head. That reads low for a US carrier, and it is: $6.90 is the direct cost of handling one contact, not a fully loaded seat, and not all 1,150 people are on contacts (supervisors, QA, workforce management and training sit in that headcount). So this check says the volume cannot be much *lower* than 4,200,000 without the unit cost breaking. It does not say it cannot be higher.
+
+Say the caveat with the number. $0.14 against $6.90 is the only comparison a board reads and it flatters: the 223,000 chats humans still take cost about $1,540,000 a year and do not go away, all voice is out of scope, and `bench.py` reports model cost only, about 40% under Larkspur's loaded figure.
+
+If you change any of these, change them here first and re-quote the guide from this table. Two files quoting two volumes is how a pitch loses a room.
+
 ## Which tool reads which file
 
 The table below maps each file to the tool that serves it and the system it imitates.

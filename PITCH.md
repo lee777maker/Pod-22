@@ -9,3 +9,10 @@ Guardrail:
 Next:
 Still broken:
 Lever: <cost | speed | intelligence>
+
+## Priya asked
+
+Costs:
+Wrong:
+Runs it:
+Left out:

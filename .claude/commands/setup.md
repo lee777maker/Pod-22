@@ -4,8 +4,8 @@ Get this seat ready to build, and do not stop until it is.
 and `git log --all --oneline -- .env`. If `.env` is not ignored, fix `.gitignore`
 first and only then write the file. If the log shows `.env` has ever been
 committed, stop: that is a key in the repo's history, it is on the remote, and
-it needs a facilitator and a rotation, not a `git rm`. Say so plainly and
-escalate.
+it needs the key rotated by whoever issued it, not a `git rm`. Say so plainly,
+tell them to raise it in the room now, and stop there.
 
 Then run `python3 setup.py --json` and read the result. Then loop:
 
