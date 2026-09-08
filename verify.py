@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""verify.py: the gate. Never edit this file; if a check seems wrong, say so
-out loud to a facilitator, don't route around it.
+"""verify.py: the gate. Never edit this file. If a check seems wrong, say so
+out loud in the room rather than routing around it.
 
     python3 verify.py            # status board: what's banked, what isn't
-    python3 verify.py 1.2        # check step 1.2 (Build 1, step 2)
+    python3 verify.py 1.2        # check step 1.2 (Build 1)
     python3 verify.py 2.1 --name "Your Name"
 
 Steps are named by build: 1.2, 1.3, 1.4 are Build 1; 2.1, 2.2 are Build 2;
 3.1 is Build 3; 4.1 is Build 4. The guide uses the same ids.
 
-The verifier checks what happened ON THE WIRE: how many turns, which tools,
+The gate checks what happened ON THE WIRE: how many turns, which tools,
 in which order. It does not read your code and does not care what your code
 looks like. Any implementation that behaves correctly passes.
 """
@@ -412,7 +412,7 @@ def step_4(args) -> List[Check]:
                  "booking escalating is the correct outcome, not a miss.",
         ))
         # DRIFT NOTE: deliberately not asserted: which tool it called, or what
-        # it said. That's a model-behaviour question this step doesn't grade;
+        # it said. That's a model-behavior question this step doesn't grade;
         # generalizing across five different shapes without crashing or
         # spinning forever is the whole point of step 1.4.
 
@@ -738,7 +738,7 @@ def step_6(args) -> List[Check]:
                            rep.get("release", "?")),
                         hint="This asks about COVERAGE, not about passing. BLOCKED with a named "
                              "hard gate is a legitimate result and is not scored down anywhere "
-                             "in this exercise. And if a case fails on behaviour you believe was "
+                             "in this exercise. And if a case fails on behavior you believe was "
                              "right, suspect the rubric before the agent: read "
                              "evals/GRADER-BUG.md, which is that exact failure from Larkspur's "
                              "own week 8."))
@@ -998,8 +998,8 @@ def step_2_2(args) -> List[Check]:
                         % (", ".join(merged) or "none"),
                         hint="--show-tools lists nine tools and none from the server. The "
                              "server is answering; Claude is never told. The list that goes "
-                             "out on every turn is assembled in agent.py, in one line, and "
-                             "that line is the seam."))
+                             "out on every turn is assembled in agent.py, in one line, in "
+                             "tool_list(). That line is the one to change."))
     if not merged:
         return checks
 
@@ -1131,7 +1131,7 @@ def _resolve_name(profile: dict, name: Optional[str]) -> str:
         return profile["name"]
     try:
         return input("Your name, the same name you typed on the build site, because the "
-                     "code is minted from it (gate 3.1 also looks for it on your eval "
+                     "code is made from it (gate 3.1 also looks for it on your eval "
                      "case): ").strip()
     except (EOFError, KeyboardInterrupt):
         print()

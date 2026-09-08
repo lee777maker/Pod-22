@@ -12,10 +12,10 @@ each one is **wrong**. Your job each step is the same:
     5. run it again       and watch the trace change
 
 That last step is the one people skip and the one that teaches. A trace you
-can explain is the deliverable; the working agent is a side effect.
+can explain is the deliverable. The working agent is a side effect.
 
 You are free to delete any of these functions and rewrite them from scratch.
-The verifier checks what happens on the wire, not what your code looks like.
+The gate checks what happens on the wire, not what your code looks like.
 
     claude            # start Claude Code in this folder
     /coach             # it works with you, not for you. That's deliberate
@@ -27,7 +27,7 @@ from typing import Any, Dict, List
 
 from support import (MODEL, SYSTEM_PROMPT, Tracer, execute_tool, get_client,
                      record_tool_result, reset_call_log, runtime_preamble, wrap)
-# Used by tool_results() below and by the 2.2 seam at the bottom. Imported here
+# Used by tool_results() below and by tool_list() at the bottom. Imported here
 # so this file reads top to bottom; it starts no server until something asks it.
 from support import mcp_client
 
@@ -36,7 +36,7 @@ MAX_TOOL_CALLS = 8  # Larkspur's own week-2 build capped the loop at eight API
                     # reason.
 
 # =============================================================================
-# LATER SEAMS: both empty on day one, and that is correct.
+# TWO PLACES YOU FILL LATER: both empty on day one, and that is correct.
 #
 # TONE_ADDENDUM is the intelligence lane's authoring target: the given system
 # prompt says nothing about what to do when a customer is abusive or threatens
@@ -397,7 +397,7 @@ def next_available_day(origin: str, dest: str, date: str, cabin: str = "Y"):
     """Given. The earliest date with an open seat. The backend function existed
     all along; nobody had given Claude a way to call it.
 
-    pax_count never crosses this wrapper on purpose: the backend then answers
+    pax_count never crosses this function on purpose: the backend then answers
     for a party of one, and finding that gap is Build 3's capacity case.
     """
     from support import mock_backend

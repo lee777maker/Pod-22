@@ -1,9 +1,9 @@
 # Larkspur disruption agent: the pod repo
 
 A multi-tool disruption-care agent for Larkspur Airlines, built against nine
-tools that already work (`support/tools.py`, backed by real airline fixture
-data in `data/americas/`). Your job is `agent.py`: the tool schemas Claude
-sees, and the loop that drives them.
+tools that already work (`support/tools.py`, backed by a frozen copy of real
+airline data in `data/americas/`). Your job is `agent.py`: what Claude is told
+about each tool, and the loop that drives them.
 
 **Open `guide/index.html` for the steps.** It is the build, page by page: what
 you are building, what to do, what it looks like when it worked, and where to
@@ -24,7 +24,7 @@ python3 pod_sync.py --status --build 2
 
 ## The five commands
 
-That is the whole path. Nothing else is ceremony you have to remember.
+That is the whole path. Nothing else has to be held in your head.
 
 ```bash
 git clone <your pod repo URL>      # once
@@ -39,20 +39,20 @@ live call to Claude. Every failure it prints names the fix. Run it at your own
 desk: there is no offline path in this pack, so a credential that does not work
 is a blocker, not an inconvenience.
 
-`run.py` shows the wire. `verify.py` checks behaviour on the wire and prints
-your evidence code. `claude` in this folder gives you `/setup`, `/coach`,
+`run.py` shows the wire: every request and reply, exactly as it went. `verify.py`
+checks behavior on the wire and prints your evidence code. `claude` in this folder gives you `/setup`, `/coach`,
 `/check` and `/readout`, which is the shortest path in if you would rather not
 lead with a terminal.
 
 ## One repo, several people
 
 The rule, in one sentence: **nobody commits `agent.py` mid-build. At the end,
-the block's committer runs `python3 pod_sync.py --push-canon` and everyone else
+the build's committer runs `python3 pod_sync.py --push-canon` and everyone else
 runs `python3 pod_sync.py --take-canon`.**
 
 Everyone builds their own `agent.py` on their own laptop. Several people
 editing one file in one repo at once produces a merge conflict inside a loop
-they are all still learning to read, and no breakout has time for that.
+they are all still learning to read, and no build has time for that.
 
 `--take-canon` saves your version to `.workshop/mine/` first and prints the
 path. Nothing you wrote is lost, and `diff` against the canon is the most
@@ -76,11 +76,11 @@ than re-running `bench.py --label before` against the current agent.
 |---|---|
 | `setup.py` | Checks this seat. `--fix` builds the venv and installs. Run it until READY. |
 | `run.py <PNR> --trace` | Runs the agent on one ticket and shows every turn on the wire. `--all` runs the five shapes and writes the totals. |
-| `verify.py <step>` | A gate: `1.2`, `1.3`, `1.4`, `2.1`, `2.2`, `3.1`, `4.1`. No step gives you the status board. |
+| `verify.py <step>` | A gate: `1.2`, `1.3`, `1.4`, `2.1`, `2.2`, `3.1`, `4.1`. Run it with no step and it prints the status board. |
 | `pod_sync.py` | The pod's canon and the pod's seats: `--push-canon`, `--take-canon`, `--status`. |
 | `eval_harness.py` | Runs `evals/cases.json`, your pod's own cases, against your agent. |
 | `bench.py --label <name>` | Measures a run: latency, tokens, cache, cost per contact. The before/after pair around your lever. |
-| `readout.py` | Renders the one-page readout the canon push publishes. |
+| `readout.py` | Writes the one page that says what your agent is and what it just did. The canon push publishes it. |
 
 `TEAM.md` is the pod's name and a typed roster, written once by whoever created
 the repo, and its order is the seat order. `PITCH.md` and `evals/cases.json`
@@ -90,4 +90,4 @@ leaves your laptop.
 ## Ground rule
 
 If you cannot explain a turn on your own trace (`python3 run.py <PNR>
---trace`), you have not finished the step, whatever the verifier says.
+--trace`), you have not finished the step, whatever the gate says.

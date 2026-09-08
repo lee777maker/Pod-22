@@ -7,7 +7,7 @@ Date:
 Three lines, and nobody else can write them for you. The account is a logo, not
 a segment and not a vertical. The workflow is one job you understand end to end,
 the way you now understand a disruption chat: who starts it, what it reads, what
-it is allowed to change, and what has to stay human. The date is a date inside
+it may change, and what stays human. The date is a date inside
 30 days, on a calendar, for a conversation that is already in somebody's diary
 or is about to be. A repo nobody takes to a customer inside 30 days is a
 training exercise, and the whole point of the two sessions is that this one is

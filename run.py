@@ -10,7 +10,7 @@
 
 --trace prints the wire: every API turn, the parameters you sent, the blocks
 that came back, the tools Claude picked, what each tool answered, and what it
-cost. Read it. The trace is the lesson; the answer is just the by-product.
+cost. Read it. The trace is the lesson. The answer is the by-product.
 
 Tool results print under the call that asked for them, shortened to a headline.
 -v prints the whole recorded result, which is what you want when a tool answered
@@ -21,7 +21,7 @@ Every run also writes the trace to .workshop/last_trace.json, with or without
 what `python3 readout.py` turns into the pod's one-page readout, so a run you
 never made is a readout you cannot render.
 
---all additionally writes .workshop/last_run.json: one row per shape plus the
+--all also writes .workshop/last_run.json: one row per shape plus the
 totals, because "it worked on K7PQ2M" and "it worked on all five" are different
 claims and only the second one is worth putting on a readout.
 """
@@ -226,7 +226,7 @@ def run_all(message: str, trace: bool, verbose: bool = False) -> None:
 def _offered():
     """(the list that goes out on every turn, names served over MCP, names of
     yours). tool_list() is what run_agent actually sends, so this cannot drift
-    from the wire. It only reaches the MCP server if the agent's own seam
+    from the wire. It only reaches the MCP server if the agent's own tool_list()
     reaches it, which is why nothing here starts a server on day one."""
     given = agent.build_tools()
     extra = list(getattr(agent, "EXTRA_TOOLS", []) or [])
@@ -370,7 +370,7 @@ def main() -> int:
 
     if args.offline:
         print("There is no offline mode in this pack. No network means a raised hand")
-        print("and a podmate's screen. Flag it to a facilitator.")
+        print("and a podmate's screen. Raise it in the room.")
         return 1
 
     if args.show_tools:

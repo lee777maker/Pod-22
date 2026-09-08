@@ -7,12 +7,12 @@
 
 It checks one thing: that this laptop can do the build. Python, the SDK, a
 credential that actually works, git, and a real reach to the pod repo. Run it
-at your own desk, with time to fix what it finds. Everything it names is a ten
-minute fix before the day and a lost block in the room.
+at your own desk, with time to fix what it finds. Everything it names is a 10
+minute fix before the day and a lost build in the room.
 
 Design rule: this script never ends on a stack trace and never ends on
 "something went wrong". Every failure names the fix. If you hit one it cannot
-explain, that is a bug in the workshop. Tell a facilitator, because it will be
+explain, that is a bug in the workshop. Say so in the room, because it will be
 wrong for someone else too.
 """
 
@@ -153,14 +153,14 @@ def check_env_ignored():
     if code != 0:
         return Check("envleak", False, ".env is gitignored",
                      "Your API key would go to GitHub on the next push. Put `.env` in "
-                     ".gitignore\n     before you write the file, and tell a facilitator if "
+                     ".gitignore\n     before you write the file, and say so in the room if "
                      "it was ever pushed.")
     code, out = _git("log", "--all", "--oneline", "--", ".env")
     if code == 0 and out:
         return Check("envleak", False, ".env has never been committed",
                      "Found in this repo's history: %s\n"
-                     "     A key reached this repo's history. Rotate it now and tell a "
-                     "facilitator.\n"
+                     "     A key reached this repo's history. Rotate it now and say so in "
+                     "the room.\n"
                      "     Rotating is the fix. Deleting the file is not, because the old "
                      "commit still has it." % out.splitlines()[0])
     return Check("envleak", True, ".env is gitignored and never committed")
@@ -169,7 +169,7 @@ def check_env_ignored():
 def check_origin():
     """A real reach for the pod repo. This is the check that catches the
     corporate proxy that allows browsers and blocks git, which otherwise shows
-    up as a dead ten minutes in the first breakout."""
+    up as a dead ten minutes in the first build."""
     code, url = _git("remote", "get-url", "origin", timeout=15)
     if code != 0:
         return Check("origin", False, "git can reach the pod repo",
@@ -194,7 +194,7 @@ def check_origin():
                  "so this\n     has to work. In order:\n"
                  "       1. off the corporate VPN, or on guest wifi, try again\n"
                  "       2. behind a proxy? git config --global http.proxy http://your.proxy:port\n"
-                 "       3. bring it to a facilitator before the session, not during it"
+                 "       3. raise it before the session, not during it"
                  % last_line(out))
 
 
@@ -212,26 +212,26 @@ def check_mcp_seam():
     """Advisory. The MCP server and client are stdlib-only and need no
     credential, so a broken clone can be caught here in a fifth of a second
     instead of at the end of Build 2. Never blocks READY: nothing before Build
-    2 touches this seam."""
+    2 is where it gets used."""
     script = os.path.join(HERE, "support", "mcp_selftest.py")
     cmd = "python3 support/mcp_selftest.py"
     if not os.path.exists(script):
-        return Check("mcp", False, "MCP seam self-test",
+        return Check("mcp", False, "MCP self-test",
                      "support/mcp_selftest.py is missing, so the clone is incomplete.\n"
                      "     Re-clone before Build 2.", "advisory")
     try:
         r = subprocess.run([sys.executable, script], cwd=HERE, capture_output=True,
                            text=True, timeout=60)
     except subprocess.TimeoutExpired:
-        return Check("mcp", False, "MCP seam self-test: timed out",
+        return Check("mcp", False, "MCP self-test: timed out",
                      "Run it on its own and read the last line:\n       %s" % cmd, "advisory")
     except OSError as exc:
-        return Check("mcp", False, "MCP seam self-test: could not run (%s)" % exc,
+        return Check("mcp", False, "MCP self-test: could not run (%s)" % exc,
                      "Run it on its own and read the last line:\n       %s" % cmd, "advisory")
     verdict = last_line(r.stdout or r.stderr)
     if r.returncode == 0:
-        return Check("mcp", True, "MCP seam self-test: %s" % verdict)
-    return Check("mcp", False, "MCP seam self-test: %s" % verdict,
+        return Check("mcp", True, "MCP self-test: %s" % verdict)
+    return Check("mcp", False, "MCP self-test: %s" % verdict,
                  "Nothing before Build 2 needs this, so it is not blocking. For the\n"
                  "     failing line and why:\n       %s" % cmd, "advisory")
 
@@ -306,7 +306,7 @@ def check_live_call():
             hint = {
                 "APIConnectionError": "Could not reach the API at all. A proxy is probably "
                                       "swallowing it. Try guest wifi or a phone hotspot, and "
-                                      "bring it to a facilitator before the day if it stays "
+                                      "raise it before the day if it stays "
                                       "broken.",
                 "PermissionDeniedError": "That credential is valid but has no access to "
                                          "%s." % MODEL,

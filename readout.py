@@ -28,7 +28,7 @@ Two halves, one self-contained HTML file, readout.html at the repo root:
   THE LOOP: your latest wire trace, drawn as the loop it actually was: each
   API turn, what went up, what came back, which tools fired, and where
   stop_reason finally changed. This is the "prove it ran" half. It is ONE
-  conversation: after a `run.py --all` sweep it is the last of the five shapes,
+  conversation: after a `run.py --all` run it is the last of the five shapes,
   and the page says which ticket that was so nobody reads it as the whole set.
 
 Pushing readout.html is the submission. There is nothing to upload. It is also
@@ -36,8 +36,8 @@ the fastest way to explain your agent to another pod: one page, no code tour.
 
 It writes readout-trace.json beside it (the trace summary alone) and carries a
 copy of the same numbers (plus whichever gates this laptop has banked) inside
-the page in a <script id="evidence"> block, so the grader can read a cloned repo
-that never had a .workshop/ folder.
+the page in a <script id="evidence"> block, so whoever scores it can read a
+cloned repo that never had a .workshop/ folder.
 
 Given, like the tracer. Reading it is the point, editing it is not.
 """
@@ -78,7 +78,7 @@ GIVEN_TOOL_COUNT = 9  # the nine shipped schemas; anything past this is yours
 # ---------------------------------------------------------------------------
 # Gate id -> the one sentence a client hears. This is the only place in the
 # repo where a banked gate becomes client language, and it is deliberately
-# narrow: every sentence is a statement about behaviour that the gate actually
+# narrow: every sentence is a statement about behavior that the gate actually
 # read on the wire. No accuracy, no dollars, no "reliable", no "production
 # ready". A gate that banked on a BLOCKED release still gets an honest
 # sentence, because "we ran the suite and it blocked" is a stronger claim than
@@ -128,8 +128,8 @@ GATE_ORDER = ["1.2", "1.3", "1.4", "2.1", "2.2", "3.1", "4.1"]
 NOT_MEASURED_ALWAYS = [
     "Accuracy at volume. Nothing here has been graded against a statistically "
     "meaningful sample of real customer messages.",
-    "Real customer traffic. Every run in this pack is against fixture data on "
-    "a laptop, not against your live contact center.",
+    "Real customer traffic. Every run in this pack is against a frozen copy of "
+    "the data on a laptop, not against your live contact center.",
     "Loaded cost. Any dollar figure here is model cost only. Larkspur's loaded "
     "cost per resolved contact ran about 40% above its model cost once "
     "infrastructure and evals were counted.",
@@ -790,7 +790,7 @@ def render_client(arch: dict, pod: str, evidence: dict, pitch: dict, account: di
     out.append("</ul>")
     if bench.get("before") and bench.get("after"):
         out.append("<p class='sub'>There is a before-and-after bench pair on this laptop. "
-                   "Whatever it says is model cost and laptop latency on fixture data. Put "
+                   "Whatever it says is model cost and laptop latency on a frozen copy of the data. Put "
                    "the caveat above on the same slide as the number.</p>")
 
     # -- still broken ---------------------------------------------------------

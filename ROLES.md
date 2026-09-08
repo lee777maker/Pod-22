@@ -6,7 +6,7 @@ seats move down it by one, the same way the committer already does.
 Build 1 gives the first seat to the first name. Build 2 gives it to the second
 name. It wraps.
 
-    committer      = roster[(build - 1) % len(roster)]
+    committer      = the Nth name on the roster, for build N, and it wraps
     reader         = the next name after the committer
     trace-caller   = the name after that
     typist         = the name after that
@@ -41,7 +41,7 @@ everyone goes back to their own file.
 
 **Client chair.** Writes the question a client would ask about what just
 changed, before the gate banks, into the pod thread. One question per build, in
-the client's words, not the code's. The client chair also owns four lines the
+the client's words, not the code's. The client chair also owns 5 things the
 pod is scored on:
 
 | Where | What the client chair writes |
@@ -78,6 +78,6 @@ read the trace out loud anyway.
 
 ## Ground rule
 
-A seat is a job for the build, not a rank, and it is never a licence to watch.
+A seat is a job for the build, not a rank, and it is never a license to watch.
 Everyone builds their own `agent.py` and everyone banks their own gate. The
 seats decide who talks first, not who works.

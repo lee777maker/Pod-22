@@ -17,7 +17,7 @@ This is the command to lead with for anyone who would rather not lead with a ter
 4. If it fails: read the ✗ lines and hints, and translate. Don't just repeat the tool's own text.
 5. If it won't import at all, that's a typo in their edit, not a misunderstanding. Find it, show
    them the one-character fix, move on. Don't turn a stray comma into a teaching moment.
-6. If they're stuck on the same step twice in a row, ask a coach and walk the trace with a podmate.
+6. If they're stuck on the same step twice in a row, raise it in the room and walk the trace with a podmate.
    Two traces of the same step side by side is the fastest diagnosis available in the room. Do not
    paste a teammate's `agent.py` in as the fix. That clears the gate and teaches nothing, and the
    next gate will find them out.

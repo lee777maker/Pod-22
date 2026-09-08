@@ -401,7 +401,7 @@ def tool_schema_tokens(tools, client=None, model=None, per_tool=False):
     Returns (total, {name: tokens}, how). `how` is "counted" when the SDK's
     token counter answered (deterministic, no generation, and it prices the
     schema exactly as the API will) and "estimated" when it could not, in which
-    case the numbers are len(json)/4 and must be labelled as estimates wherever
+    case the numbers are len(json)/4 and must be labeled as estimates wherever
     they are printed.
 
     `total` is the whole list's tax: what having these tools costs above having

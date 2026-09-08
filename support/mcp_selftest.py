@@ -183,9 +183,9 @@ def run(trace: bool) -> int:
     print("=" * 74)
     total = PASSES + FAILURES
     if FAILURES:
-        print("%d FAIL / %d checks. The MCP seam is not ready." % (FAILURES, total))
+        print("%d FAIL / %d checks. The MCP server and client are not ready." % (FAILURES, total))
         return 1
-    print("%d/%d PASS. The MCP seam is ready." % (PASSES, total))
+    print("%d/%d PASS. The MCP server and client are ready." % (PASSES, total))
     return 0
 
 

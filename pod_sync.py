@@ -7,12 +7,12 @@
     python3 pod_sync.py --take-canon     # everyone else: pick the canon up
 
 The protocol is one sentence. Nobody commits agent.py mid-build. At the end of
-the build, the block's committer runs --push-canon and everybody else runs
+the build, the build's committer runs --push-canon and everybody else runs
 --take-canon.
 
 That is the whole reason this file exists. Several people editing one agent.py
 in one repo at the same time produces a merge conflict inside a function they
-are all still learning to read, and no breakout has time for that. So during
+are all still learning to read, and no build has time for that. So during
 the build everyone builds their own agent.py locally, and the repo only ever
 holds one version: the one the pod chose.
 
@@ -47,7 +47,7 @@ MINE_DIR = os.path.join(HERE, ".workshop", "mine")
 #
 # readout.html and readout-trace.json are in .gitignore so nobody hand-commits
 # a stale readout. This list is the exception, and cmd_push_canon force-adds
-# them: the readout is published by the block's committer, regenerated, or not
+# them: the readout is published by the build's committer, regenerated, or not
 # at all.
 CANON_FILES = ["agent.py", "readout.html", "readout-trace.json", "PITCH.md",
                "evals/cases.json", "build2_probe.txt"]
@@ -334,7 +334,7 @@ def cmd_status(args):
     if behind:
         print("You are behind. If the build is over:  python3 pod_sync.py --take-canon")
     elif ahead:
-        print("You have local commits the pod does not. If you are the block's committer:")
+        print("You have local commits the pod does not. If you are the build's committer:")
         print("  python3 pod_sync.py --push-canon")
     else:
         print("Nothing to sync. Build.")
@@ -631,7 +631,7 @@ def cmd_take_canon(args):
             return fail("Could not move your branch onto the pod's canon.", last_line(out),
                         "Your agent.py is saved at %s, so nothing of yours is at risk."
                         % (os.path.relpath(saved, HERE) if saved else "(none)"),
-                        "Show a facilitator this line and keep building on your own copy.")
+                        "Show this line in the room and keep building on your own copy.")
         restore_deleted()
         git("checkout", "--", "agent.py")
         print("  you had local commit(s) the pod does not have. They are unwound onto the")
@@ -667,7 +667,7 @@ def cmd_take_canon(args):
         return fail("agent.py here still does not match the pod's canon.",
                     "Your version is saved at %s."
                     % (os.path.relpath(saved, HERE) if saved else "(none)"),
-                    "Run this to take it by hand, then tell a facilitator it happened:",
+                    "Run this to take it by hand, then say in the room that it happened:",
                     "  git checkout %s -- agent.py" % ref)
 
     canon = canon_commits(ref)
@@ -739,7 +739,7 @@ if __name__ == "__main__":
         print("\n%s" % RULE)
         print("pod_sync hit something it does not have a fix for:")
         print("  %s: %s" % (type(exc).__name__, exc))
-        print("This is a workshop bug. Tell a facilitator, it will be wrong for someone else too.")
+        print("This is a workshop bug. Say so in the room, it will be wrong for someone else too.")
         print("Meanwhile your work is safe: nothing here deletes a file, and your own")
         print("agent.py copies are in .workshop/mine/.")
         print(RULE)

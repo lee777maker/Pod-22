@@ -8,8 +8,8 @@
 
 Every lane measures with this. The cost lane reads the token and cache columns,
 the speed lane reads p50 and the mean, the intelligence lane reads the wire-rule
-count on stage 2. One harness, so a pod never has to argue about whose numbers
-are whose.
+count on stage 2. One tool for all three, so a pod never has to argue about
+whose numbers are whose.
 
 Results land in .workshop/bench-<label>.json. The gate (verify.py 4.1) reads two
 of those files, so a pod that tunes before it measures has nothing to show.

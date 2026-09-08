@@ -28,14 +28,14 @@ Coach the person through whichever step they're currently on. Follow CLAUDE.md's
      it for them.
    - **client chair**: coach them to ask, not to code. They own the 1.4 claim, the 2.1 probe
      sentence, the 3.1 case authored in their own name, the 4.1 caveat and the pitch. Push on
-     whether a client would recognise the sentence. Do not draft it.
+     whether a client would recognize the sentence. Do not draft it.
    - **reader**: if the pod has jumped down the Do list, say so to the reader.
    - **committer**: one canon push per build. If it is not theirs this build, give them
      `--take-canon` and say whose it is.
    - **typist**: they type while the pod talks one thing through. Everyone still banks their own
      gate on their own file, so send the pod back to their own laptops after.
 8. When the gate passes, the pod action is `python3 readout.py`. That is the submission, one page,
-   nothing to upload. Then, at the end of the build, the block's committer runs
+   nothing to upload. Then, at the end of the build, the build's committer runs
    `python3 pod_sync.py --push-canon` and everyone else runs `--take-canon`.
 
 Stretch is after the gate, never instead of it, and it never overwrites banked evidence.

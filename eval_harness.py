@@ -17,8 +17,8 @@ The contract is Larkspur's own, from the engagement (case study, beat 6):
     UNKNOWN counts as FAIL and queues for the human panel
     one FAIL in a hard-gate suite blocks the release candidate
 
-One thing is NOT in that contract, and this harness holds the line on it: a
-judge that a grader cannot read is a grader failure, not an agent failure. When
+One thing is NOT in that contract, and this file holds the line on it: a judge
+whose reply cannot be read is a grader failure, not an agent failure. When
 the judge's reply does not parse as JSON, the judge is asked once more for JSON
 only. If that reply does not parse either, the case is recorded as UNKNOWN,
 printed as such, left out of the pass rate on both sides, and never counted as

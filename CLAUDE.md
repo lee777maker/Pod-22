@@ -9,8 +9,8 @@ you help.
 
 A Partner Basecamp build-along wrapped around one continuous case: Larkspur
 Airlines, a disruption-care chat agent. The participant is building a
-multi-tool agent against the Claude Messages API, tool schemas and an agentic
-loop, tested against real airline policy data.
+multi-tool agent against the Claude Messages API: what Claude is told about each
+tool, and the loop that drives them, tested against real airline policy data.
 
 **This repo belongs to a pod, not to one person.** Several people share one
 GitHub repo and every one of them has a clone of it on their own laptop.
@@ -18,14 +18,14 @@ GitHub repo and every one of them has a clone of it on their own laptop.
 `evals/cases.json` are the pod's shared record.
 
 **`agent.py` is not one of those.** Everyone builds their own `agent.py`
-locally, and nobody commits it mid-build. At the end of a build the block's
+locally, and nobody commits it mid-build. At the end of a build the build's
 committer publishes theirs as the pod's canon with `python3 pod_sync.py
 --push-canon` and everyone else picks it up with `--take-canon`. So the person
 you are helping is building their own file, in their own words, alongside
 several other people doing the same thing. Their whole job is in `agent.py`.
 Everything in `support/` is given and should not be edited.
 
-They verify with `python3 verify.py <step>`, which checks behaviour on the
+They verify with `python3 verify.py <step>`, which checks behavior on the
 wire, not code shape.
 
 ## How to help: the contract
@@ -63,7 +63,7 @@ names their seat, coach that seat:
 - **Client chair.** Coach them to ask, never to code. They own the 1.4 claim,
   the 2.1 probe sentence, the 3.1 case with their own name in `author`, the 4.1
   caveat and the pitch. Every one of those is a sentence about the customer, so
-  push on whether a client would recognise it, and do not draft it for them. If
+  push on whether a client would recognize it, and do not draft it for them. If
   they ask to be shown `agent.py` instead, that is their call, but say what their
   own line still needs first.
 - **Reader.** If the pod is solving item 5 while item 2 is unbuilt, say so to
@@ -80,7 +80,7 @@ So:
    `stop_reason == "tool_use"`. If they cannot say it, that is the first thing
    to work on, and it is more useful than any code you could write.
 2. **Build to what they said, not around it.** If what they said is vague,
-   build exactly that and let the verifier catch it. A failing verify caused by
+   build exactly that and let the gate catch it. A failing gate caused by
    a vague tool description is the single most valuable thing that can happen
    in this session. Do not pre-empt it.
 3. **Explain the wire, not the code.** After a change, point them at
@@ -89,7 +89,7 @@ So:
    more than a code tour.
 4. **Never edit the given files.** That is `support/`, `verify.py`, `setup.py`,
    `pod_sync.py`, `readout.py`, `bench.py`, `eval_harness.py`, and never weaken
-   `.gitignore` or `.gitattributes`. If a verifier check seems wrong, say so
+   `.gitignore` or `.gitattributes`. If a gate's check seems wrong, say so
    out loud. It is a workshop bug worth reporting, not something to route
    around. Do not weaken a check to make a step pass.
 5. **Do not run ahead.** Build the step they are on. If they ask about 1.4
@@ -149,7 +149,7 @@ So:
   - **Every build:** `python3 run.py <PNR> --trace`, then
     `python3 verify.py <step>`. The steps are `1.2`, `1.3`, `1.4` (Build 1),
     `2.1`, `2.2` (Build 2), `3.1` (Build 3), `4.1` (Build 4).
-  - **End of a build:** `python3 readout.py`, then the block's committer runs
+  - **End of a build:** `python3 readout.py`, then the build's committer runs
     `python3 pod_sync.py --push-canon` and everyone else runs
     `python3 pod_sync.py --take-canon`.
   - **Next session:** `python3 bench.py --label before` / `--label after`

@@ -12,7 +12,7 @@ Produce the build's readout and hand it off. This is the submission: one page, n
 3. If a number looks wrong to them, do not edit the readout. Walk the trace instead. The readout
    only reports what the run did.
 4. Then the handoff. `readout.html` and `readout-trace.json` are committed by ONE person per
-   build, the block's committer, who also publishes the pod's canon:
+   build, the build's committer, who also publishes the pod's canon:
 
        python3 pod_sync.py --push-canon
 
