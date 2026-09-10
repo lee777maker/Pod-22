@@ -225,9 +225,15 @@ def load_agent():
 
 
 def call_agent(fn: Callable, *args, **kwargs):
+    """Run one conversation and hand back (result, tracer).
+
+    The tracer lives on support.LAST, put there by new_session(), and it is read
+    out of sys.modules because load_agent() above purges and re-imports the
+    package on every gate.
+    """
     result = fn(*args, **kwargs)
-    agent_module = sys.modules.get("agent")
-    tracer = agent_module.LAST.tracer if agent_module else None
+    support = sys.modules.get("support")
+    tracer = getattr(getattr(support, "LAST", None), "tracer", None)
     return result, tracer
 
 

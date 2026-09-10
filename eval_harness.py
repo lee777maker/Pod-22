@@ -281,7 +281,9 @@ def run_case(agent, case) -> dict:
         error = None
     except Exception as exc:  # noqa: BLE001
         reply, error = "", "%s: %s" % (type(exc).__name__, exc)
-    tracer = getattr(getattr(agent, "LAST", None), "tracer", None)
+    # support.LAST, put there by new_session(). Read out of sys.modules because
+    # load_agent() above purges and re-imports the package.
+    tracer = getattr(getattr(sys.modules.get("support"), "LAST", None), "tracer", None)
     return {
         "reply": reply,
         "error": error,

@@ -136,7 +136,9 @@ def run_one(agent, task) -> dict:
         reply, error = "", "%s: %s" % (type(exc).__name__, exc)
 
     wall = time.time() - t0
-    tracer = getattr(getattr(agent, "LAST", None), "tracer", None)
+    # support.LAST, put there by new_session(). Read out of sys.modules because
+    # load_agent() purges and re-imports the package.
+    tracer = getattr(getattr(sys.modules.get("support"), "LAST", None), "tracer", None)
     summary = tracer.summary() if tracer else {}
     tokens = summary.get("tokens") or {}
 

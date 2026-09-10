@@ -18,6 +18,10 @@ same idea, made structural instead of written down in a prompt and hoped for:
     simulate_customer_confirm_click() can mint. That function is not a tool
     and never will be. "The customer said yes" in a chat message can't
     produce a valid one.
+
+next_available_day() sits at the bottom with them, and is deliberately NOT one
+of the nine: nothing offers it to Claude, so nothing can call it. call_local()
+is beside it, and it is what runs a tool you registered yourself.
 """
 
 from __future__ import annotations
@@ -148,6 +152,34 @@ TOOL_FUNCTIONS = {
     "escalate_to_human": escalate_to_human,
     "send_confirmation": send_confirmation,
 }
+
+
+def next_available_day(origin, dest, date, cabin="Y"):
+    """The earliest date with an open seat. Not one of the nine, and not in
+    TOOL_FUNCTIONS: the backend function existed all along and nothing had told
+    Claude it was there.
+
+    pax_count never crosses this function on purpose. The backend then answers
+    for a party of one, and finding that gap is Build 3's capacity case.
+    """
+    return backend.earliest_alternative_date(origin, dest, date, cabin)
+
+
+def call_local(fn, name, args):
+    """Run one tool that lives in agent.py's LOCAL_TOOLS, and record what it
+    answered so the trace (and the eval judge reading it) sees the answer and
+    not only the ask.
+
+    Bad arguments come back as an error dict rather than an exception, the same
+    way execute_tool() answers for the given nine: the model can read that and
+    try again, and the loop never stalls on an unanswered tool_use id.
+    """
+    try:
+        output = fn(**dict(args or {}))
+    except TypeError as exc:
+        output = {"error": "Bad arguments for %s: %s" % (name, exc)}
+    record_tool_result(name, output)
+    return output
 
 
 def execute_tool(name, tool_input):

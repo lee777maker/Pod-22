@@ -2,13 +2,12 @@
 """pod_sync.py: one repo, several people, no merge conflicts.
 
     python3 pod_sync.py --status         # where the pod is, and where you are
-    python3 pod_sync.py --status --build 2   # the five seats for that build
     python3 pod_sync.py --push-canon     # you built it: publish it as the canon
     python3 pod_sync.py --take-canon     # everyone else: pick the canon up
 
-The protocol is one sentence. Nobody commits agent.py mid-build. At the end of
-the build, the build's committer runs --push-canon and everybody else runs
---take-canon.
+The protocol is one sentence. Nobody commits agent.py mid-build. One person
+pushes the canon at the end of the build. Agree who before the clock runs out.
+Everyone else takes it.
 
 That is the whole reason this file exists. Several people editing one agent.py
 in one repo at the same time produces a merge conflict inside a function they
@@ -84,25 +83,16 @@ def last_line(text):
 
 
 # ---------------------------------------------------------------------------
-# the roster and the five seats
+# the roster
 # ---------------------------------------------------------------------------
-# TEAM.md is the roster and the roster order is the seat order. Build 1 gives
-# the committer seat to the first name and it moves down one name per build,
-# which is exactly what --push-canon has always done. ROLES.md is the
-# participant-facing description of the same table, and build/index.html
-# derives it identically, so the three surfaces never disagree.
+# TEAM.md is the roster: the pod's name and one typed name per person. The
+# overnight review reads the names off it, and --status prints it as one
+# paste-able line. Nothing derives a job from its order. The pod decides in the
+# moment who does what, and the one rule that holds is the canon rule: one
+# person pushes at the end of the build, agreed before the clock runs out.
 
 TEAM_PATH = os.path.join(HERE, "TEAM.md")
 ROSTER_PLACEHOLDER = re.compile(r"^<.*>$")
-
-# offset from the committer -> seat, by pod size. Below 3 one person holds
-# every seat; above 7 the extra names double up as trace-callers.
-SEAT_TABLE = {
-    3: ["committer", "trace-caller", "client chair"],
-    4: ["committer", "reader", "trace-caller", "client chair"],
-    5: ["committer", "reader", "trace-caller", "typist", "client chair"],
-}
-SEAT_EXTRA = {5: "trace-caller", 6: "client chair"}
 
 
 def read_roster():
@@ -122,20 +112,6 @@ def read_roster():
             continue
         names.append(name)
     return names
-
-
-def seats_for(roster, build):
-    """[(seat, name)] for one build, in seat order. See ROLES.md."""
-    size = len(roster)
-    if size == 0:
-        return []
-    start = (int(build) - 1) % size
-    if size < 3:
-        return [("every seat", roster[start])]
-    plan = list(SEAT_TABLE.get(min(size, 5), SEAT_TABLE[5]))
-    for i in range(5, size):
-        plan.append(SEAT_EXTRA.get(i, "trace-caller"))
-    return [(seat, roster[(start + i) % size]) for i, seat in enumerate(plan)]
 
 
 def fail(headline, *fix_lines):
@@ -307,22 +283,14 @@ def cmd_status(args):
     if names:
         print("            pushed by: %s" % ", ".join(names))
 
-    # One paste-able line. The build site takes it as it stands and names the
-    # seats from it, so the pod stops typing five different rosters.
+    # One paste-able line. The overnight review reads these names, and it is
+    # the fastest way to see the roster is actually finished.
     people = read_roster()
     if people:
         print("\n  roster: %s" % ", ".join(people))
-        print("          Paste that line into the build site's pod panel.")
     else:
         print("\n  roster    TEAM.md has no names yet. Whoever created the repo types one")
         print("            line per person under the pod name and commits it once.")
-
-    if people and args.build:
-        print("\n  Build %s seats (roster order, ROLES.md):" % args.build)
-        for seat, who in seats_for(people, args.build):
-            print("    %-14s %s" % (seat, who))
-    elif people:
-        print("          Add --build 2 to see who sits where in that build.")
 
     warn = bench_warning()
     if warn:
@@ -701,9 +669,6 @@ def main():
     parser.add_argument("--gate", default=None,
                         help="which verify.py step this build is, e.g. 1.4 "
                              "(default: worked out for you)")
-    parser.add_argument("--build", default=None, type=int,
-                        help="with --status: also print the five seats for that "
-                             "build number, e.g. --build 2 (see ROLES.md)")
     parser.add_argument("--force", action="store_true",
                         help="with --take-canon: you already know your gate has not passed. "
                              "Skip the heads-up (taking it is no longer refused)")

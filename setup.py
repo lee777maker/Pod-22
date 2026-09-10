@@ -202,7 +202,7 @@ def check_claude_cli():
     path = shutil.which("claude")
     if not path:
         return Check("claude", False, "Claude Code installed",
-                     "The go-read step and /coach both lean on it. Install:\n"
+                     "The go-read step and /build both lean on it. Install:\n"
                      "       npm install -g @anthropic-ai/claude-code    (or see docs.claude.com)",
                      "advisory")
     return Check("claude", True, "Claude Code installed (%s)" % path)

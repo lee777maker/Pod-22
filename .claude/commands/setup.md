@@ -1,4 +1,4 @@
-Get this seat ready to build, and do not stop until it is.
+Get this machine ready to build, and do not stop until it is.
 
 **Step 0, before you write any credential anywhere.** Run `git check-ignore -q .env`
 and `git log --all --oneline -- .env`. If `.env` is not ignored, fix `.gitignore`

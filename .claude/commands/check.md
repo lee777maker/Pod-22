@@ -14,7 +14,11 @@ This is the command to lead with for anyone who would rather not lead with a ter
    receipt for the step. There is nothing to upload and nothing to push.
 3. Then point them at `python3 readout.py`. It is the one-page submission for the build: what the
    agent IS and what it just DID, no upload, nothing to write up.
-4. If it fails: read the ✗ lines and hints, and translate. Don't just repeat the tool's own text.
+4. Paste what it printed into your reply as a code block, every line, verbatim, whether it
+   passed or failed. Never a summary, never "see above": the tool card collapses, your reply
+   does not. Then ask what turn 2 shows.
+   Translate the ✗ lines and hints after the output, not instead of it, and don't just repeat the
+   tool's own text.
 5. If it won't import at all, that's a typo in their edit, not a misunderstanding. Find it, show
    them the one-character fix, move on. Don't turn a stray comma into a teaching moment.
 6. If they're stuck on the same step twice in a row, raise it in the room and walk the trace with a podmate.

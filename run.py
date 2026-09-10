@@ -38,7 +38,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
 import agent  # noqa: E402
-from support import DEFAULT_LAST_NAME, DEFAULT_PNR, STAGE1_TASKS  # noqa: E402
+from support import LAST, DEFAULT_LAST_NAME, DEFAULT_PNR, STAGE1_TASKS  # noqa: E402
 
 DEFAULT_MESSAGE = "My flight was disrupted. Can you help me figure out what happens next?"
 
@@ -78,7 +78,7 @@ def run_one(pnr: str, last_name: str, message: str, trace: bool, shape: str = ""
         failure = f"{type(exc).__name__}: {exc}"
         print(f"\n[!!] {failure}")
 
-    tracer = agent.LAST.tracer
+    tracer = LAST.tracer
     if failure is not None:
         print(
             "\n  The run stopped on that instead of answering. The trace below ends on the\n"

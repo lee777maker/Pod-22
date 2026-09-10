@@ -34,12 +34,29 @@
   .msg.me{align-self:flex-end;background:var(--ink);color:var(--cream);border-bottom-right-radius:4px}
   .msg.them{align-self:flex-start;background:#fff;border:1.5px solid var(--sand);
             border-bottom-left-radius:4px}
-  .msg.err{align-self:stretch;max-width:100%;background:#fdf2ef;border:1.5px solid var(--stop);
-           font:400 12px/1.5 var(--mono);color:var(--stop);white-space:pre-wrap;overflow-x:auto}
+  /* Errors are cards, never tracebacks, and never red. A half-built agent is
+     the normal state of this repo for most of two sessions. */
+  .card{align-self:stretch;max-width:100%;background:var(--sand);color:var(--ink);
+        border:1.5px solid rgba(20,20,19,.14);border-radius:12px;padding:13px 16px}
+  .card h4{font:600 13.5px/1.35 var(--sans);margin-bottom:7px}
+  .card .detail{font:400 12px/1.55 var(--mono);white-space:pre-wrap;word-break:break-word;
+                background:var(--cream);border:1px solid rgba(20,20,19,.10);border-radius:8px;
+                padding:9px 11px;overflow-x:auto}
+  .card .hint{font:400 12.5px/1.5 var(--sans);color:var(--ink-55);margin-top:9px}
+  .card .kind{font:700 9.5px/1 var(--sans);letter-spacing:.1em;text-transform:uppercase;
+              color:var(--ink-30);display:block;margin-bottom:5px}
+  .card details{margin-top:8px}
+  .card summary{font:500 12px/1.4 var(--sans);color:var(--ink-55);cursor:pointer}
+  .card details .detail{margin-top:8px}
   .meta{align-self:flex-start;font:400 11px/1 var(--mono);color:var(--ink-30);
         letter-spacing:.02em;margin-top:-8px}
   .empty{margin:auto;text-align:center;color:var(--ink-30);max-width:320px}
   .empty svg{width:34px;height:34px;margin-bottom:12px}
+  .orient{padding:11px 22px 12px;border-bottom:1.5px solid var(--sand);flex-shrink:0;
+          font:400 12.5px/1.5 var(--sans);color:var(--ink-55);background:#fff}
+  .orient b{color:var(--ink);font-weight:600}
+  .orient code{font:400 12px/1 var(--mono);background:var(--cream);
+               border:1px solid var(--sand);border-radius:4px;padding:1px 4px}
 
   .compose{border-top:1.5px solid var(--sand);padding:14px 22px 18px;flex-shrink:0;background:var(--cream)}
   .who{display:flex;gap:8px;margin-bottom:9px}
@@ -61,6 +78,8 @@
   .confirm-card p{font-size:12px;color:var(--ink-55);margin-bottom:10px}
   .confirm-card .row{gap:6px}
   .confirm-card button{padding:8px 13px;font-size:12.5px}
+  .confirm-card .ids{font:400 12px/1.6 var(--mono);color:var(--ink);margin-bottom:6px}
+  .confirm-card.dead{border-color:var(--sand);border-left-color:var(--sand)}
 
   /* ── evidence panel ───────────────────────────────────── */
   .panel{height:100vh;overflow-y:auto;padding:20px;background:#fff}
@@ -129,6 +148,11 @@
       </svg>
       <h1>Larkspur · disruption care</h1>
       <span class="sub" id="whoami"></span>
+    </div>
+
+    <div class="orient">
+      <b>This is the agent you are building.</b> It runs <code>run_agent()</code>
+      in <code>agent.py</code>. Everything else here is given.
     </div>
 
     <div class="stream" id="stream">
@@ -264,12 +288,63 @@ function metaLine(text) {
   stream.appendChild(d); stream.scrollTop = stream.scrollHeight;
 }
 
-function confirmCard(hold) {
+// A neutral card, on sand, in ink. `api` and `backend` show the source's own
+// words. Only `bug` carries a traceback, and it stays folded until asked for.
+const KIND_LABEL = {api: 'The API said no', backend: 'The backend said no',
+                    bug: 'Not a workshop step', empty: 'The answer came back empty'};
+
+function errorCard(err) {
+  $('empty')?.remove();
   const wrap = document.createElement('div');
-  wrap.className = 'confirm-card';
+  wrap.className = 'card';
+  const kind = document.createElement('span');
+  kind.className = 'kind';
+  kind.textContent = KIND_LABEL[err.kind] || 'Something came back';
+  const head = document.createElement('h4');
+  head.textContent = err.title || 'Something came back';
+  wrap.appendChild(kind); wrap.appendChild(head);
+
+  if (err.detail) {
+    if (err.kind === 'bug') {
+      const fold = document.createElement('details');
+      const sum = document.createElement('summary');
+      sum.textContent = 'Show the traceback';
+      const pre = document.createElement('div');
+      pre.className = 'detail'; pre.textContent = err.detail;
+      fold.appendChild(sum); fold.appendChild(pre);
+      wrap.appendChild(fold);
+    } else {
+      const pre = document.createElement('div');
+      pre.className = 'detail'; pre.textContent = err.detail;
+      wrap.appendChild(pre);
+    }
+  }
+  if (err.hint) {
+    const hint = document.createElement('div');
+    hint.className = 'hint'; hint.textContent = err.hint;
+    wrap.appendChild(hint);
+  }
+  stream.appendChild(wrap);
+  stream.scrollTop = stream.scrollHeight;
+  return wrap;
+}
+
+// The Confirm card reads the hold id out of what hold_seat ANSWERED. The
+// option_id is a different identifier for a different thing: a flight option,
+// not a hold, and a Confirm click carrying one cannot resolve to anything.
+function confirmCard(hold) {
+  const live = !!(hold.hold_id && hold.live);
+  const wrap = document.createElement('div');
+  wrap.className = 'confirm-card' + (live ? '' : ' dead');
+  const ids = hold.hold_id
+    ? `Held: <b>${hold.hold_id}</b> for option ${hold.option_id || '-'}`
+    : 'No hold to confirm.';
+  const note = live
+    ? 'A rebooking needs a token only this click can produce. The forge button sends a made-up one.'
+    : (hold.why || 'There is no live hold behind this card.');
   wrap.innerHTML = `<h4>Confirm your new flight</h4>
-    <p>Held: <b>${hold.option_id || '-'}</b>. A rebooking needs a token only this
-       click can produce. The forge button sends a made-up one.</p>
+    <div class="ids">${ids}</div>
+    <p>${note}</p>
     <div class="row">
       <button data-a="real">Confirm rebooking</button>
       <button class="ghost" data-a="forge">Try a forged token</button>
@@ -277,15 +352,25 @@ function confirmCard(hold) {
     <div class="cmd" style="display:none"></div>`;
   const out = wrap.querySelector('.cmd');
   wrap.querySelectorAll('button').forEach(b => {
+    if (!live) { b.disabled = true; return; }
     b.onclick = async () => {
       wrap.querySelectorAll('button').forEach(x => x.disabled = true);
-      const r = await fetch('/api/confirm', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({hold_id: hold.hold_id || hold.option_id,
-                              forge: b.dataset.a === 'forge'})
-      }).then(x => x.json());
-      out.style.display = 'block';
-      out.textContent = JSON.stringify(r.result ?? r, null, 1);
+      let r;
+      try {
+        r = await fetch('/api/confirm', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({hold_id: hold.hold_id, forge: b.dataset.a === 'forge'})
+        }).then(x => x.json());
+      } catch (e) {
+        r = {error: {kind:'bug', title:'The demo surface could not be reached',
+                     detail:String(e), hint:'This is not a workshop step; say so in the room.'}};
+      }
+      if (r.error) {
+        errorCard(r.error);
+      } else {
+        out.style.display = 'block';
+        out.textContent = JSON.stringify(r.result ?? r, null, 1);
+      }
       wrap.querySelectorAll('button').forEach(x => x.disabled = false);
       loadEvidence();
     };
@@ -316,20 +401,22 @@ async function send() {
       body: JSON.stringify({pnr, last_name, message})
     });
     const d = await r.json();
-    if (d.error) {
-      pending.remove();
-      bubble('err', d.error);
-    } else {
-      pending.className = 'msg them';
-      pending.textContent = d.reply || '(empty reply)';
+    pending.remove();
+    if ((d.reply || '').trim()) bubble('them', d.reply);
+    // The turn happened even when the answer did not, so the meta line still
+    // goes up: turns and tool calls are the evidence the step asks you to read.
+    if (d.turns) {
       const tk = d.tokens || {};
       metaLine(`${d.turns} turns · ${(d.tool_names||[]).join(' → ') || 'no tools'} · `
              + `${tk.input||0} in / ${tk.output||0} out · ${d.wall}s`);
-      if (d.held) { lastHold = d.held; confirmCard(d.held); }
     }
+    if (d.error) errorCard(d.error);
+    if (d.held) { lastHold = d.held; confirmCard(d.held); }
   } catch (err) {
     pending.remove();
-    bubble('err', String(err));
+    errorCard({kind:'bug', title:'The demo surface could not be reached',
+               detail:String(err),
+               hint:'This is not a workshop step; say so in the room.'});
   }
   $('send').disabled = false;
   $('msg').select();

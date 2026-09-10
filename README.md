@@ -12,15 +12,12 @@ paper.
 
 **The same steps run on the build site**, which your pod opens together in the
 room: <https://virtual.partnerbasecamp.com/build/>. It adds the build clock, a
-checklist per step, the pod panel that names who sits where, and the box where
-you paste the evidence code a gate prints. Nothing uploads either way.
+checklist per step, the end-of-build ritual, and the box where you paste the
+evidence code a gate prints. Nothing uploads either way.
 
-**`ROLES.md` is who does what.** Five seats, rotating down the `TEAM.md` roster
-one build at a time. Print your pod's seats for a build:
-
-```bash
-python3 pod_sync.py --status --build 2
-```
+**Nobody in the pod has an assigned job.** You decide in the moment who does
+what. One rule holds: one person pushes the canon at the end of the build.
+Agree who before the clock runs out. Everyone else takes it.
 
 ## The five commands
 
@@ -40,15 +37,21 @@ desk: there is no offline path in this pack, so a credential that does not work
 is a blocker, not an inconvenience.
 
 `run.py` shows the wire: every request and reply, exactly as it went. `verify.py`
-checks behavior on the wire and prints your evidence code. `claude` in this folder gives you `/setup`, `/coach`,
+checks behavior on the wire and prints your evidence code. `claude` in this folder gives you `/setup`, `/build`,
 `/check` and `/readout`, which is the shortest path in if you would rather not
 lead with a terminal.
 
 ## One repo, several people
 
-The rule, in one sentence: **nobody commits `agent.py` mid-build. At the end,
-the build's committer runs `python3 pod_sync.py --push-canon` and everyone else
-runs `python3 pod_sync.py --take-canon`.**
+Whoever creates the repo makes it private, adds every podmate, and adds the room
+lead's GitHub handle, which is in the chat. That is how the overnight review
+reaches your repo: it is written in from outside, into the repo you shared, and a
+repo nobody shared gets no file. Post the repo URL in the pod thread at the ship.
+
+The rule, in one sentence: **nobody commits `agent.py` mid-build. One person
+pushes the canon at the end of the build with `python3 pod_sync.py
+--push-canon`. Agree who before the clock runs out. Everyone else takes it with
+`python3 pod_sync.py --take-canon`.**
 
 Everyone builds their own `agent.py` on their own laptop. Several people
 editing one file in one repo at once produces a merge conflict inside a loop
@@ -74,16 +77,16 @@ than re-running `bench.py --label before` against the current agent.
 
 | Script | What it does |
 |---|---|
-| `setup.py` | Checks this seat. `--fix` builds the venv and installs. Run it until READY. |
+| `setup.py` | Checks this machine. `--fix` builds the venv and installs. Run it until READY. |
 | `run.py <PNR> --trace` | Runs the agent on one ticket and shows every turn on the wire. `--all` runs the five shapes and writes the totals. |
 | `verify.py <step>` | A gate: `1.2`, `1.3`, `1.4`, `2.1`, `2.2`, `3.1`, `4.1`. Run it with no step and it prints the status board. |
-| `pod_sync.py` | The pod's canon and the pod's seats: `--push-canon`, `--take-canon`, `--status`. |
+| `pod_sync.py` | The pod's canon: `--push-canon`, `--take-canon`, `--status`. |
 | `eval_harness.py` | Runs `evals/cases.json`, your pod's own cases, against your agent. |
 | `bench.py --label <name>` | Measures a run: latency, tokens, cache, cost per contact. The before/after pair around your lever. |
 | `readout.py` | Writes the one page that says what your agent is and what it just did. The canon push publishes it. |
 
 `TEAM.md` is the pod's name and a typed roster, written once by whoever created
-the repo, and its order is the seat order. `PITCH.md` and `evals/cases.json`
+the repo. The review reads the names off it. `PITCH.md` and `evals/cases.json`
 are the pod's shared record, and they are normal commits. The bench pair never
 leaves your laptop.
 

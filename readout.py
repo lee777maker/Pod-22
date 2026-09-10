@@ -206,15 +206,21 @@ def read_architecture() -> dict:
     arch["extra_tools"] = len(extra)
     # tool_list() is the exact list run_agent() sends, and it lazily discovers
     # MCP tools the way run.py --show-tools does. Falling back to tools + extra
-    # keeps this working before tool_list() exists.
+    # keeps this working if tool_list() has been renamed away.
     assemble = getattr(agent, "tool_list", None)
     offered = list(assemble()) if callable(assemble) else (tools + extra)
     # Same tag logic as run.py show_tools(), so the readout and --show-tools can
     # never disagree about who serves a tool: a name the MCP client brought back
     # is `via mcp`, a name in EXTRA_TOOLS is `yours`, everything else is given.
-    # This is a set membership test, not a position test: an index-based guess
-    # mislabels the moment a tool moves onto the server.
-    over_mcp = {t["name"] for t in (getattr(agent, "_MCP_CACHE", []) or [])}
+    # Asked of the client, not of the agent, and after tool_list() has run: the
+    # client's own record of what came over the wire is the honest answer to
+    # "which of these are MCP", and it cannot be fooled by where a name sits in
+    # the list.
+    try:
+        from support import mcp_client
+        over_mcp = set(getattr(mcp_client, "tool_names", set()) or set())
+    except Exception:  # noqa: BLE001 - no client in the clone is not an error
+        over_mcp = set()
     extra_names = {t.get("name") for t in extra}
     for t in offered:
         desc = t.get("description", "") or ""

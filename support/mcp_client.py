@@ -28,11 +28,15 @@ USE IT
 
     from support import mcp_client
 
-    for schema in mcp_client.discover():       # Anthropic-shaped, ready to send
+    for schema in mcp_client.tools():          # Anthropic-shaped, ready to send
         print(schema["name"], schema["input_schema"])
 
     print(mcp_client.call("next_available_day",
                           {"origin": "DEN", "dest": "BOI", "date": "2025-05-06"}))
+
+`tools()` is the one to reach for from a tool list: it asks the server once per
+process and caches the answer. `call_remote()` is the one to reach for from a
+tool loop: it always answers, and it records what came back on the trace.
 
 Or hold the server yourself:
 
@@ -517,6 +521,12 @@ tool_names: set = set()
 
 _shared: Optional[MCPServer] = None
 
+# Filled by tools() on first discovery and read from there afterwards. Private
+# on purpose: tools() is the only name worth reaching for, because the cache is
+# empty until something has actually asked the server, so a tool list that read
+# this directly would look correct, type-check, and hand back nothing.
+_TOOLS_CACHE: List[Dict[str, Any]] = []
+
 
 def server(cmd: Optional[List[str]] = None, trace: bool = False) -> MCPServer:
     """The shared server, started if it is not already running."""
@@ -537,13 +547,57 @@ def discover(cmd: Optional[List[str]] = None, trace: bool = False) -> List[Dict[
     return schemas
 
 
+def tools(cmd: Optional[List[str]] = None, trace: bool = False) -> List[Dict[str, Any]]:
+    """Every tool the server has, Anthropic-shaped, once per process, cached.
+
+    Nothing starts the server until something calls this, so a file that has not
+    been wired never spawns it. A server that will not start returns an empty
+    list and says why, so a broken server costs you a message and two tools
+    rather than a crash halfway through a customer conversation.
+    """
+    global _TOOLS_CACHE
+    if _TOOLS_CACHE:
+        return _TOOLS_CACHE
+    try:
+        _TOOLS_CACHE = discover(cmd, trace)
+    except Exception as exc:  # noqa: BLE001 - a dead server is not a stack trace
+        print("  [mcp] no tools discovered: %s: %s" % (type(exc).__name__, exc))
+        print("  [mcp] python3 support/mcp_selftest.py says why on one line.")
+        _TOOLS_CACHE = []
+    return _TOOLS_CACHE
+
+
 def call(name: str, arguments: Optional[Dict[str, Any]] = None) -> str:
     """Run one tool on the shared server and return its text."""
     return server().call(name, arguments)
 
 
+def call_remote(name: str, arguments: Optional[Dict[str, Any]] = None) -> Any:
+    """call(), packaged for the tool loop: it always answers, and it records.
+
+    A protocol failure is an integration bug rather than something the model can
+    fix, and call() raises for exactly that reason. It still has to come back as
+    a tool result, or the loop stalls on an unanswered tool_use id, so the
+    exception becomes an error dict here. The result is recorded either way, the
+    same call support/tools.py makes for the given nine, so the trace shows what
+    the server answered and not only what was asked of it.
+    """
+    # Imported here rather than at the top: this file also runs as a script
+    # (python3 support/mcp_client.py), where a relative import has no package.
+    from .trace import record_tool_result
+
+    try:
+        output: Any = call(name, arguments)
+    except Exception as exc:  # noqa: BLE001 - it has to answer, whatever happened
+        output = {"error": "mcp call failed for %s: %s: %s"
+                           % (name, type(exc).__name__, exc)}
+    record_tool_result(name, output)
+    return output
+
+
 def close() -> None:
-    global _shared
+    global _shared, _TOOLS_CACHE
+    _TOOLS_CACHE = []
     if _shared is not None:
         _shared.close()
         _shared = None
