@@ -5,15 +5,19 @@ tools that already work (`support/tools.py`, backed by a frozen copy of real
 airline data in `data/americas/`). Your job is `agent.py`: what Claude is told
 about each tool, and the loop that drives them.
 
-**Open `guide/index.html` for the steps.** It is the build, page by page: what
+**Open `guide/index.html` for the steps.** It opens on **Get started**, the four
+things to do before the first build, and then it is the build page by page: what
 you are building, what to do, what it looks like when it worked, and where to
 look when it did not. `guide/Larkspur-Build-Guide.pdf` is the same thing on
 paper.
 
 **The same steps run on the build site**, which your pod opens together in the
-room: <https://virtual.partnerbasecamp.com/build/>. It adds the build clock, a
-checklist per step, the end-of-build ritual, and the box where you paste the
-evidence code a gate prints. Nothing uploads either way.
+room: <https://virtual.partnerbasecamp.com/build/>. It opens on Get started too,
+and keeps that page one click away on the **Start** tab and on the **Get
+started** button in the right-hand panel, so a laptop that breaks later can find
+it. It adds the build clock, a checklist per step, the end-of-build ritual, and
+the box where you paste the evidence code a gate prints. Nothing uploads either
+way. Pick your surface once on Get started and it stays picked.
 
 **Nobody in the pod has an assigned job.** You decide in the moment who does
 what. One rule holds: one person pushes the canon at the end of the build.
@@ -43,10 +47,18 @@ lead with a terminal.
 
 ## One repo, several people
 
-Whoever creates the repo makes it private, adds every podmate, and adds the room
-lead's GitHub handle, which is in the chat. That is how the overnight review
-reaches your repo: it is written in from outside, into the repo you shared, and a
-repo nobody shared gets no file. Post the repo URL in the pod thread at the ship.
+One person in the pod makes this repo from the template the room lead posts in
+chat: **Use this template**, then **Create a new repository**, owner their own
+account, Private. Then **Settings**, **Collaborators**, **Add people** for every
+podmate by GitHub username, plus the room lead's handle, which is in the chat.
+That handle is how the overnight review reaches your repo: it is written in from
+outside, into the repo you shared, and a repo nobody shared gets no file. Then
+they post the repo URL in the pod thread, and nobody else does anything until it
+is there.
+
+Everyone else has an invitation email waiting. Accept it before you try to
+clone, because a private repo refuses you until you do. Clone it rather than
+downloading a zip, because the checks read git history.
 
 The rule, in one sentence: **nobody commits `agent.py` mid-build. One person
 pushes the canon at the end of the build with `python3 pod_sync.py
