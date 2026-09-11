@@ -153,99 +153,16 @@ footer.chrome .notice{font:500 12px/1.4 var(--sans);color:var(--text-chrome);max
 <div class="intro"><p>You are the team Larkspur Airlines brought in. Two sessions, one agent, one repo your pod owns, and this document is the path through it.</p><p>Every build step carries the same five blocks. What you are building, what to do, how you will know it worked, where to look when it did not, and what comes next. Read the third one first.</p><p><code>agent.py</code> is the file you edit. Everything under <code>support/</code> is given, correct, and never touched. <code>verify.py</code> reads the wire, meaning the requests and replies that actually went out, rather than how you wrote the code. There is no one implementation it is hunting for.</p><p>Nothing in here hands you an answer. When a step says the trace is the debugger, it means it. Run it, read what came back, change one thing, run it again.</p><p>The same steps live on the workshop site, which your pod opens together in the room. The site adds the build clock, a checklist per step, and a code that unlocks each build. This document is the same path on paper.</p></div>
 </div>
 <div class="lane"><div class="meta">The shape of the two sessions. Widths are the real minutes.</div>
-<div class="lane-row"><div class="lbl">Session one<br><span class="meta" style="font-size:10.5px;color:var(--text-support)">230 min</span></div><div class="lane-track"><a class="seg guide" href="#before" style="flex:50 1 0"><span class="t">Open, setup</span><span class="m">50 min</span></a><div class="seg room" style="flex:20 1 0"><span class="m" style="margin:0">20 min</span></div><a class="seg build" href="#build-1" style="flex:45 1 0"><span class="t">Build 1</span><span class="m">45 min</span></a><div class="seg break" style="flex:20 1 0"><span class="t">Break</span><span class="m">20 min</span></div><div class="seg room" style="flex:20 1 0"><span class="m" style="margin:0">20 min</span></div><a class="seg build" href="#build-2" style="flex:45 1 0"><span class="t">Build 2</span><span class="m">45 min</span></a><a class="seg guide" href="#ship" style="flex:30 1 0"><span class="t">Pitch, ship</span><span class="m">30 min</span></a></div></div>
+<div class="lane-row"><div class="lbl">Session one<br><span class="meta" style="font-size:10.5px;color:var(--text-support)">230 min</span></div><div class="lane-track"><a class="seg guide" href="#welcome" style="flex:50 1 0"><span class="t">Open, setup</span><span class="m">50 min</span></a><div class="seg room" style="flex:20 1 0"><span class="m" style="margin:0">20 min</span></div><a class="seg build" href="#build-1" style="flex:45 1 0"><span class="t">Build 1</span><span class="m">45 min</span></a><div class="seg break" style="flex:20 1 0"><span class="t">Break</span><span class="m">20 min</span></div><div class="seg room" style="flex:20 1 0"><span class="m" style="margin:0">20 min</span></div><a class="seg build" href="#build-2" style="flex:45 1 0"><span class="t">Build 2</span><span class="m">45 min</span></a><a class="seg guide" href="#ship" style="flex:30 1 0"><span class="t">Pitch, ship</span><span class="m">30 min</span></a></div></div>
 <div class="lane-row"><div class="lbl">Session two<br><span class="meta" style="font-size:10.5px;color:var(--text-support)">225 min</span></div><div class="lane-track"><a class="seg guide" href="#between" style="flex:30 1 0"><span class="t">Open</span><span class="m">30 min</span></a><div class="seg room" style="flex:25 1 0"><span class="m" style="margin:0">25 min</span></div><a class="seg build" href="#build-3" style="flex:55 1 0"><span class="t">Build 3</span><span class="m">55 min</span></a><div class="seg break" style="flex:20 1 0"><span class="t">Break</span><span class="m">20 min</span></div><div class="seg room" style="flex:10 1 0"><span class="m" style="margin:0">10 min</span></div><a class="seg build" href="#build-4" style="flex:45 1 0"><span class="t">Build 4</span><span class="m">45 min</span></a><a class="seg guide" href="#pitch" style="flex:25 1 0"><span class="t">Pitch</span><span class="m">25 min</span></a><a class="seg guide" href="#close" style="flex:15 1 0"><span class="t">Close</span><span class="m">15 min</span></a></div></div>
 <div class="key"><span><i class="b"></i>Build, in this guide</span><span><i class="g"></i>Also in this guide</span><span><i class="r"></i>In the room, off the decks</span></div></div>
-<nav class="toc"><ol><li class="sec"><a href="#before">Get started</a></li><li class="sec"><a href="#case">The client and the ask</a></li><li class="sec"><a href="#build-1">Build 1 · First pass at the agent</a></li><li><a href="#step-1.1"><span class="id">1.1</span>Read the trace, find the four faults</a></li><li><a href="#step-1.2"><span class="id">1.2</span>Make the loop hold</a></li><li><a href="#step-1.3"><span class="id">1.3</span>Make the tools route</a></li><li><a href="#step-1.4"><span class="id">1.4</span>All five shapes, numbers written down</a></li><li class="sec"><a href="#build-2">Build 2 · Your own tools</a></li><li><a href="#step-2.1"><span class="id">2.1</span>Your own tool, chosen unprompted</a></li><li><a href="#step-2.2"><span class="id">2.2</span>The same tool, over MCP</a></li><li class="sec"><a href="#ship">Pitch and ship</a></li><li class="sec"><a href="#between">Between sessions</a></li><li class="sec"><a href="#build-3">Build 3 · Build the proof</a></li><li><a href="#step-3.1"><span class="id">3.1</span>Build the proof</a></li><li class="sec"><a href="#build-4">Build 4 · Pull the lever</a></li><li><a href="#step-4.1"><span class="id">4.1</span>Pull the lever, measure it</a></li><li class="sec"><a href="#pitch">Pitch the client</a></li><li class="sec"><a href="#close">What is provable now</a></li><li class="sec"><a href="#appendix-a">A · Working in one repo</a></li><li class="sec"><a href="#appendix-b">B · The five tickets</a></li><li class="sec"><a href="#appendix-c">C · The words of the build</a></li><li class="sec"><a href="#appendix-d">D · What this agent cannot do, and what stops it</a></li></ol></nav>
-<section class="chapter" id="before">
-<span class="pill between">At the beginning of the session</span>
-<h2>Get <strong>started</strong></h2>
-<p class="lead">Four things, in order, and then you are building. Everything <code>setup.py</code> names is a 10 minute fix here and a lost build later. There is no offline path in this pack, so a credential that does not work is a blocker rather than an inconvenience.</p>
+<nav class="toc"><ol><li class="sec"><a href="#welcome">Welcome to your build.</a></li><li class="sec"><a href="#questions">Three questions, one answer each.</a></li><li class="sec"><a href="#setup">Get set up.</a></li><li class="sec"><a href="#build-1">Build 1 · First pass at the agent</a></li><li><a href="#step-1.1"><span class="id">1.1</span>Read the trace, find the four faults</a></li><li><a href="#step-1.2"><span class="id">1.2</span>Make the loop hold</a></li><li><a href="#step-1.3"><span class="id">1.3</span>Make the tools route</a></li><li><a href="#step-1.4"><span class="id">1.4</span>All five shapes, numbers written down</a></li><li class="sec"><a href="#build-2">Build 2 · Your own tools</a></li><li><a href="#step-2.1"><span class="id">2.1</span>Your own tool, chosen unprompted</a></li><li><a href="#step-2.2"><span class="id">2.2</span>The same tool, over MCP</a></li><li class="sec"><a href="#ship">Pitch and ship</a></li><li class="sec"><a href="#between">Between sessions</a></li><li class="sec"><a href="#build-3">Build 3 · Build the proof</a></li><li><a href="#step-3.1"><span class="id">3.1</span>Build the proof</a></li><li class="sec"><a href="#build-4">Build 4 · Pull the lever</a></li><li><a href="#step-4.1"><span class="id">4.1</span>Pull the lever, measure it</a></li><li class="sec"><a href="#pitch">Pitch the client</a></li><li class="sec"><a href="#close">What is provable now</a></li><li class="sec"><a href="#appendix-a">A · Working in one repo</a></li><li class="sec"><a href="#appendix-b">B · The five tickets</a></li><li class="sec"><a href="#appendix-c">C · The words of the build</a></li><li class="sec"><a href="#appendix-d">D · What this agent cannot do, and what stops it</a></li></ol></nav>
+<section class="chapter" id="welcome">
+<span class="pill between">Start</span>
+<h2>Welcome to <strong>your build</strong>.</h2>
+<p class="lead">Welcome. You're the team Larkspur Airlines brought in, and this page is where the two sessions run from. Three things before the room comes back together, and they go in this order.</p>
 <div class="pb">
-<h4>How you'll work</h4>
-<p>Three ways to run this, and all three end up in the same repo typing the same commands. Pick the one you already live in and stay in it for both sessions.</p>
-<p>The build site carries these same three columns and remembers the one you pick, so items 3 and 4 read in your own surface. On paper all three sit side by side.</p>
-<div class="tbl"><table>
-<tr><th></th><th>Terminal and any editor</th><th>VS Code with the Claude Code extension</th><th>Claude desktop app, Code tab</th></tr>
-<tr><td>Where you type</td><td>Your own terminal, and any editor you like for <code>agent.py</code>.</td><td>The terminal inside VS Code, and VS Code for <code>agent.py</code>.</td><td>The chat in the Code tab. Claude runs the commands, and the terminal panel beside the chat shows what it ran.</td></tr>
-<tr><td>Where Claude Code lives</td><td><code>claude</code>, typed in the repo folder.</td><td>The Claude icon in the left bar, or <code>claude</code> in that terminal.</td><td>The Code tab is Claude Code. You are already in it.</td></tr>
-</table></div>
-</div>
-<div class="pb">
-<h4>1. You're in</h4>
-<p>Your name, your pod name and the workshop code got you here, and this laptop is the only place they are held. Nothing else on this page wants your details.</p>
-</div>
-<div class="pb">
-<h4>2. One person makes the pod repo</h4>
-<p>The room lead posts the template link in chat. One person in the pod opens it, and nobody else does anything until the repo URL is in the pod thread.</p>
-<p>That one person, on GitHub. Hit <strong>Use this template</strong>, then <strong>Create a new repository</strong>. Owner is their own account. Set it to Private, then create it.</p>
-<p>Then <strong>Settings</strong>, <strong>Collaborators</strong>, <strong>Add people</strong>. Every podmate by GitHub username, and the room lead's handle as well. That handle is how the overnight review reaches your repo, and it cannot be fixed that night.</p>
-<p>Post the repo URL in the pod thread.</p>
-<p>Everyone else has an invitation email waiting. Accept it before you try to clone, because a private repo refuses you until you do.</p>
-</div>
-<div class="pb">
-<h4>3. Everyone clones it and opens it</h4>
-<p>One command is the same on all three, and it is this one. Clone it rather than downloading a zip, because the checks read git history.</p>
-<pre class="cmd"><span class="p">$ </span>git clone &lt;your pod repo URL&gt;</pre>
-<div class="tbl"><table>
-<tr><th></th><th>Terminal and any editor</th><th>VS Code with the Claude Code extension</th><th>Claude desktop app, Code tab</th></tr>
-<tr><td>Clone it</td><td>Open your terminal. On macOS that is Terminal, on Windows it is PowerShell. Run <code>git clone &lt;URL&gt;</code>, then <code>cd</code> into the folder it made. If git asks you to sign in, use your GitHub login.</td><td>Install the Claude Code extension from the Extensions view if it is not there already, publisher Anthropic, and sign in. Then <strong>Terminal</strong>, <strong>New Terminal</strong>, and run <code>git clone &lt;URL&gt;</code> in it.</td><td>Clone first in a normal terminal, Terminal on macOS or PowerShell on Windows. Run <code>git clone &lt;URL&gt;</code> there.</td></tr>
-<tr><td>Open the folder</td><td>The <code>cd</code> put you in it. Edit <code>agent.py</code> later in whatever editor you like.</td><td><strong>File</strong>, <strong>Open Folder</strong>, and pick the folder git made. Open a new terminal again now the folder is open, and it starts inside the repo.</td><td>In the Claude app, open the Code tab and start a session in the folder git made.</td></tr>
-<tr><td>Start Claude Code</td><td>Type <code>claude</code> in that folder. The first time it asks whether to trust the folder, say yes, or none of the repo's settings apply.</td><td>The Claude icon in the left bar, or <code>claude</code> in that terminal. Say yes to the trust prompt the first time.</td><td>The Code tab is Claude Code. Ask it to run a command and it runs it, and the terminal panel beside the chat shows what it ran. Say yes when it asks to trust the folder. When it runs <code>run.py</code> for you, the trace is still yours to read, in full.</td></tr>
-</table></div>
-</div>
-<div class="pb">
-<h4>4. Run setup until it says READY</h4>
-<p>Run it, work down the lines it marks, run it again. Every failure it prints names its own fix. Keep going until the last line reads READY.</p>
-<p><code>--fix</code> builds the isolated environment and installs the dependencies for you, then prints the two lines to run next.</p>
-<p>Leave it running and go read the case.</p>
-<pre class="cmd"><span class="p">$ </span>python3 setup.py
-<span class="p">$ </span>python3 setup.py --fix</pre>
-<div class="tbl"><table>
-<tr><th></th><th>Terminal and any editor</th><th>VS Code with the Claude Code extension</th><th>Claude desktop app, Code tab</th></tr>
-<tr><td>Run it</td><td><code>python3 setup.py</code> in the repo folder.</td><td><code>python3 setup.py</code> in the terminal that opened inside the repo.</td><td>Ask Claude to run <code>python3 setup.py</code>, and read the last line yourself.</td></tr>
-</table></div>
-</div>
-<div class="pb">
-<h4>What READY checks</h4>
-<div class="tbl"><table>
-<tr><th>Check</th><th>What has to be true</th></tr>
-<tr><td>Python</td><td>3.9 or higher on this laptop. 3.11 is preferred, 3.9 works.</td></tr>
-<tr><td>Anthropic SDK</td><td>Importable, with a version it can print.</td></tr>
-<tr><td>Isolated environment</td><td>A <code>.venv</code> here, a conda env, or system Python with the SDK on it.</td></tr>
-<tr><td><code>.workshop/</code> writable</td><td>It holds the evidence codes your gates print, and your bench numbers.</td></tr>
-<tr><td>git and your identity</td><td>Installed, with a name and an email set.</td></tr>
-<tr><td><code>.env</code></td><td>Gitignored, and never committed. Your key never travels.</td></tr>
-<tr><td>The pod repo</td><td>git can actually reach the remote from here.</td></tr>
-<tr><td>Claude Code</td><td>Installed and on your path.</td></tr>
-<tr><td>A credential</td><td>One the SDK can read. An unset key does not mean you have none.</td></tr>
-<tr><td>One live call</td><td>A real request to Claude that comes back with text.</td></tr>
-</table></div>
-</div>
-<div class="pb">
-<h4>If it will not go green</h4>
-<p>Two tries, then stop debugging quietly. Post the exact failing line in your pod thread, with the 10 lines above it, and someone comes to you.</p>
-<p>Do not spend a build on this. Reading the agent needs no environment at all.</p>
-</div>
-<p class="closer">Setup running? Good. Now read the case.</p>
-</section>
-<section class="chapter" id="case">
-<span class="pill between">The client</span>
-<h2>The client and <strong>the ask</strong></h2>
-<p class="lead">Setup running? Good. Read. Fifteen minutes as a pod: ten on the case and the three questions below, out loud, then five on the connection. Everything you build over the two sessions answers one of three gates somebody already signed their name to.</p>
-<div class="pb">
-<h4>Talk it through, as a pod</h4>
-<p>Read the case, then answer these three out loud before anyone types. You bring the answers back to the room; nobody answers them from the front.</p>
-<div class="tbl"><table>
-<tr><th></th><th>The question</th><th>What it is really asking</th></tr>
-<tr><td>Scope</td><td>What is this agent allowed to do?</td><td>Where it acts on its own, where it asks, where it hands off.</td></tr>
-<tr><td>Evidence</td><td>If it answers wrong, what would we look for?</td><td>The one place you would open first: the trace, a tool result, the policy row.</td></tr>
-<tr><td>Decision</td><td>What do we change?</td><td>The judgment call. Your pod makes it together, and it is the one the room wants to hear.</td></tr>
-</table></div>
-</div>
-<div class="pb">
-<h4>Then the last five minutes on the connection</h4>
-<p>Repo made and everyone invited. Everyone cloned. <code>setup.py</code> says READY on every laptop, or the failing line is in the pod thread. Come back with the three answers and a green setup.</p>
+<ul><li>Read the case study below.</li><li>Answer the three questions.</li><li>Get set up.</li></ul>
 </div>
 <div class="pb">
 <h4>Larkspur, in five lines</h4>
@@ -297,6 +214,96 @@ so customers don't wait 40 minutes.</pre>
 <p>Names, numbers, PNRs and policy live in <code>data/americas/</code>, and the record is the authority.</p>
 <p>An answer the agent cannot point at a record for is an invented flight fact, which is gate one.</p>
 </div>
+<p class="closer">Read it? Now the three questions.</p>
+</section>
+<section class="chapter" id="questions">
+<span class="pill between">As a pod</span>
+<h2>Three questions, <strong>one answer each</strong>.</h2>
+<p class="lead">Ten minutes, out loud, before anyone types. You bring the answers back to the room; nobody answers them from the front.</p>
+<div class="pb">
+<div class="tbl"><table>
+<tr><th></th><th>The question</th><th>What it is really asking</th></tr>
+<tr><td>Scope</td><td>What is this agent allowed to do?</td><td>Where it acts on its own, where it asks, where it hands off.</td></tr>
+<tr><td>Evidence</td><td>If it answers wrong, what would we look for?</td><td>The one place you would open first: the trace, a tool result, the policy row.</td></tr>
+<tr><td>Decision</td><td>What do we change?</td><td>The judgment call. Your pod makes it together, and it is the one the room wants to hear.</td></tr>
+</table></div>
+</div>
+<div class="pb">
+<p>One answer per question, not five. Decision is the one the room wants to hear, because that is the judgment call and your pod makes it together.</p>
+</div>
+<p class="closer">Answers written down? Get set up.</p>
+</section>
+<section class="chapter" id="setup">
+<span class="pill between">Before you come back</span>
+<h2>Get <strong>set up</strong>.</h2>
+<p class="lead">Five minutes at the end of the breakout, and by the time you come back you will want to have gone through all of this. If something will not go green, say so when you come back; it gets sorted before Build 1 starts.</p>
+<div class="pb">
+<h4>1. Log in to the build site</h4>
+<p>The site is <code>https://virtual.partnerbasecamp.com/build/</code>, and it wants your name, your pod's name, and the workshop code the room lead reads out. You are reading this, so this one is done.</p>
+<p>Your details are held on this laptop and nowhere else. Nothing on this page uploads.</p>
+</div>
+<div class="pb">
+<h4>2. One person makes the pod repo</h4>
+<p>The room lead posts the template link in chat. One person in the pod opens it, and nobody else does anything until the repo URL is in the pod thread.</p>
+<p>That one person, on GitHub. Hit <strong>Use this template</strong>, then <strong>Create a new repository</strong>. Owner is their own account. Set it to Private, then create it.</p>
+<p>Then <strong>Settings</strong>, <strong>Collaborators</strong>, <strong>Add people</strong>. Every podmate by GitHub username, and the room lead's handle as well. That handle is how the overnight review reaches your repo, and it cannot be fixed that night.</p>
+<p>Post the repo URL in the pod thread.</p>
+<p>Everyone else has an invitation email waiting. Accept it before you try to clone, because a private repo refuses you until you do.</p>
+</div>
+<div class="pb">
+<h4>3. Everyone clones it and opens it</h4>
+<p>How you'll work. Three ways to run this, and all three end up in the same repo typing the same commands. Pick the one you already live in and stay in it for both sessions.</p>
+<p>The build site carries these same three columns and remembers the one you pick, so the rest of this item and item 4 read in your own surface. On paper all three sit side by side.</p>
+<div class="tbl"><table>
+<tr><th></th><th>Terminal and any editor</th><th>VS Code with the Claude Code extension</th><th>Claude desktop app, Code tab</th></tr>
+<tr><td>Where you type</td><td>Your own terminal, and any editor you like for <code>agent.py</code>.</td><td>The terminal inside VS Code, and VS Code for <code>agent.py</code>.</td><td>The chat in the Code tab. Claude runs the commands, and the terminal panel beside the chat shows what it ran.</td></tr>
+<tr><td>Where Claude Code lives</td><td><code>claude</code>, typed in the repo folder.</td><td>The Claude icon in the left bar, or <code>claude</code> in that terminal.</td><td>The Code tab is Claude Code. You are already in it.</td></tr>
+</table></div>
+</div>
+<div class="pb">
+<p>One command is the same on all three, and it is this one. Clone it rather than downloading a zip, because the checks read git history.</p>
+<pre class="cmd"><span class="p">$ </span>git clone &lt;your pod repo URL&gt;</pre>
+<div class="tbl"><table>
+<tr><th></th><th>Terminal and any editor</th><th>VS Code with the Claude Code extension</th><th>Claude desktop app, Code tab</th></tr>
+<tr><td>Clone it</td><td>Open your terminal. On macOS that is Terminal, on Windows it is PowerShell. Run <code>git clone &lt;URL&gt;</code>, then <code>cd</code> into the folder it made. If git asks you to sign in, use your GitHub login.</td><td>Install the Claude Code extension from the Extensions view if it is not there already, publisher Anthropic, and sign in. Then <strong>Terminal</strong>, <strong>New Terminal</strong>, and run <code>git clone &lt;URL&gt;</code> in it.</td><td>Clone first in a normal terminal, Terminal on macOS or PowerShell on Windows. Run <code>git clone &lt;URL&gt;</code> there.</td></tr>
+<tr><td>Open the folder</td><td>The <code>cd</code> put you in it. Edit <code>agent.py</code> later in whatever editor you like.</td><td><strong>File</strong>, <strong>Open Folder</strong>, and pick the folder git made. Open a new terminal again now the folder is open, and it starts inside the repo.</td><td>In the Claude app, open the Code tab and start a session in the folder git made.</td></tr>
+<tr><td>Start Claude Code</td><td>Type <code>claude</code> in that folder. The first time it asks whether to trust the folder, say yes, or none of the repo's settings apply.</td><td>The Claude icon in the left bar, or <code>claude</code> in that terminal. Say yes to the trust prompt the first time.</td><td>The Code tab is Claude Code. Ask it to run a command and it runs it, and the terminal panel beside the chat shows what it ran. Say yes when it asks to trust the folder. When it runs <code>run.py</code> for you, the trace is still yours to read, in full.</td></tr>
+</table></div>
+</div>
+<div class="pb">
+<h4>4. Run setup until it says READY</h4>
+<p>Run it, work down the lines it marks, run it again. Every failure it prints names its own fix. Keep going until the last line reads READY.</p>
+<p><code>--fix</code> builds the isolated environment and installs the dependencies for you, then prints the two lines to run next.</p>
+<p>There is no offline path in this pack, so a credential that does not work is a blocker rather than an inconvenience.</p>
+<pre class="cmd"><span class="p">$ </span>python3 setup.py
+<span class="p">$ </span>python3 setup.py --fix</pre>
+<div class="tbl"><table>
+<tr><th></th><th>Terminal and any editor</th><th>VS Code with the Claude Code extension</th><th>Claude desktop app, Code tab</th></tr>
+<tr><td>Run it</td><td><code>python3 setup.py</code> in the repo folder.</td><td><code>python3 setup.py</code> in the terminal that opened inside the repo.</td><td>Ask Claude to run <code>python3 setup.py</code>, and read the last line yourself.</td></tr>
+</table></div>
+</div>
+<div class="pb">
+<h4>What READY checks</h4>
+<div class="tbl"><table>
+<tr><th>Check</th><th>What has to be true</th></tr>
+<tr><td>Python</td><td>3.9 or higher on this laptop. 3.11 is preferred, 3.9 works.</td></tr>
+<tr><td>Anthropic SDK</td><td>Importable, with a version it can print.</td></tr>
+<tr><td>Isolated environment</td><td>A <code>.venv</code> here, a conda env, or system Python with the SDK on it.</td></tr>
+<tr><td><code>.workshop/</code> writable</td><td>It holds the evidence codes your gates print, and your bench numbers.</td></tr>
+<tr><td>git and your identity</td><td>Installed, with a name and an email set.</td></tr>
+<tr><td><code>.env</code></td><td>Gitignored, and never committed. Your key never travels.</td></tr>
+<tr><td>The pod repo</td><td>git can actually reach the remote from here.</td></tr>
+<tr><td>Claude Code</td><td>Installed and on your path.</td></tr>
+<tr><td>A credential</td><td>One the SDK can read. An unset key does not mean you have none.</td></tr>
+<tr><td>One live call</td><td>A real request to Claude that comes back with text.</td></tr>
+</table></div>
+</div>
+<div class="pb">
+<h4>If it will not go green</h4>
+<p>Two tries, then stop debugging quietly. Post the exact failing line in your pod thread, with the 10 lines above it, and someone comes to you.</p>
+<p>Say so when you come back rather than sitting on it. Nobody loses a build over setup, and reading the agent needs no environment at all.</p>
+</div>
+<p class="closer">READY on every laptop? Come back to the room.</p>
 </section>
 <section class="chapter" id="build-1">
 <span class="pill s1">Session one</span>

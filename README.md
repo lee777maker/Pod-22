@@ -5,19 +5,20 @@ tools that already work (`support/tools.py`, backed by a frozen copy of real
 airline data in `data/americas/`). Your job is `agent.py`: what Claude is told
 about each tool, and the loop that drives them.
 
-**Open `guide/index.html` for the steps.** It opens on **Get started**, the four
-things to do before the first build, and then it is the build page by page: what
-you are building, what to do, what it looks like when it worked, and where to
-look when it did not. `guide/Larkspur-Build-Guide.pdf` is the same thing on
-paper.
+**Open `guide/index.html` for the steps.** It opens on **Welcome to your
+build**, which is the case study, then the three questions your pod answers out
+loud, then **Get set up**. After that it is the build page by page: what you are
+building, what to do, what it looks like when it worked, and where to look when
+it did not. `guide/Larkspur-Build-Guide.pdf` is the same thing on paper.
 
 **The same steps run on the build site**, which your pod opens together in the
-room: <https://virtual.partnerbasecamp.com/build/>. It opens on Get started too,
-and keeps that page one click away on the **Start** tab and on the **Get
-started** button in the right-hand panel, so a laptop that breaks later can find
-it. It adds the build clock, a checklist per step, the end-of-build ritual, and
-the box where you paste the evidence code a gate prints. Nothing uploads either
-way. Pick your surface once on Get started and it stays picked.
+room: <https://virtual.partnerbasecamp.com/build/>. It opens on the welcome too,
+and those three pages sit at the top of the left spine under **Start**, with a
+standing **Get set up** button in the right-hand panel so a laptop that breaks
+later can find it. It adds the build clock, a checklist per step, the
+end-of-build ritual, and the box where you paste the evidence code a gate
+prints. Nothing uploads either way. Pick your surface once on Get set up and it
+stays picked.
 
 **Nobody in the pod has an assigned job.** You decide in the moment who does
 what. One rule holds: one person pushes the canon at the end of the build.
