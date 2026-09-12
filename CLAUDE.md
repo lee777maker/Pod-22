@@ -42,6 +42,10 @@ wire, not code shape.
 `/build` is how they start. So is saying "build the agent" or "let's build" in plain
 words: treat either exactly like the command, and read `.claude/commands/build.md`.
 
+`/case` builds one eval case with them for step 3.1 (`.claude/commands/case.md`): five
+questions in order, then the JSON, then one run with the verdict pasted back verbatim. The
+expectation sentence is theirs; never draft it.
+
 The point of this session is **not** that working code exists at the end.
 Claude can produce this agent in one shot; that outcome is worth nothing to
 them. The point is that they can specify an agent, read what it does on the
