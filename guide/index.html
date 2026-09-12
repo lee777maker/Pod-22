@@ -97,6 +97,12 @@ tr:last-child td{border-bottom:0}
 .ansrow td{background:var(--node);padding:12px 14px 14px}
 .ansrow .al{display:block;font:700 11.5px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--text-support);margin:0 0 10px}
 .rules i{display:block;height:24px;border-bottom:1px solid var(--hairline)}
+/* a block that carries its own clock on the site prints the rule here */
+.rule{margin:0 0 12px}
+.rule .meta{color:var(--rust-deep)}
+/* where an answers block's writing goes, under the ruled lines */
+.whereto{font-size:14px;color:var(--text-support);margin:-6px 0 16px}
+.whereto .meta{color:var(--text-support);margin-right:8px}
 /* code: the ink panel */
 pre{background:var(--ink);color:var(--cream);padding:14px 16px;border-radius:14px;overflow-x:auto;font:13px/1.6 var(--mono);margin:10px 0 14px;white-space:pre-wrap;word-break:break-word}
 pre .p{color:var(--kraft);user-select:none}
@@ -160,53 +166,48 @@ footer.chrome .notice{font:500 12px/1.4 var(--sans);color:var(--text-chrome);max
 <div class="intro"><p>You are the team Larkspur Airlines brought in. Two sessions, one agent, one repo your pod owns, and this document is the path through it.</p><p>Every build step carries the same five blocks. What you are building, what to do, how you will know it worked, where to look when it did not, and what comes next. Read the third one first.</p><p><code>agent.py</code> is the file you edit. Everything under <code>support/</code> is given, correct, and never touched. <code>verify.py</code> reads the wire, meaning the requests and replies that actually went out, rather than how you wrote the code. There is no one implementation it is hunting for.</p><p>Nothing in here hands you an answer. When a step says the trace is the debugger, it means it. Run it, read what came back, change one thing, run it again.</p><p>The same steps live on the workshop site, which your pod opens together in the room. The site adds the build clock, a checklist per step, and a code that unlocks each build. This document is the same path on paper.</p></div>
 </div>
 <div class="lane"><div class="meta">The shape of the two sessions. Widths are the real minutes.</div>
-<div class="lane-row"><div class="lbl">Session one<br><span class="meta" style="font-size:10.5px;color:var(--text-support)">230 min</span></div><div class="lane-track"><a class="seg guide" href="#welcome" style="flex:50 1 0"><span class="t">Open, setup</span><span class="m">50 min</span></a><div class="seg room" style="flex:20 1 0"><span class="m" style="margin:0">20 min</span></div><a class="seg build" href="#build-1" style="flex:45 1 0"><span class="t">Build 1</span><span class="m">45 min</span></a><div class="seg break" style="flex:20 1 0"><span class="t">Break</span><span class="m">20 min</span></div><div class="seg room" style="flex:20 1 0"><span class="m" style="margin:0">20 min</span></div><a class="seg build" href="#build-2" style="flex:45 1 0"><span class="t">Build 2</span><span class="m">45 min</span></a><a class="seg guide" href="#ship" style="flex:30 1 0"><span class="t">Pitch, ship</span><span class="m">30 min</span></a></div></div>
-<div class="lane-row"><div class="lbl">Session two<br><span class="meta" style="font-size:10.5px;color:var(--text-support)">225 min</span></div><div class="lane-track"><a class="seg guide" href="#between" style="flex:30 1 0"><span class="t">Open</span><span class="m">30 min</span></a><div class="seg room" style="flex:25 1 0"><span class="m" style="margin:0">25 min</span></div><a class="seg build" href="#build-3" style="flex:55 1 0"><span class="t">Build 3</span><span class="m">55 min</span></a><div class="seg break" style="flex:20 1 0"><span class="t">Break</span><span class="m">20 min</span></div><div class="seg room" style="flex:10 1 0"><span class="m" style="margin:0">10 min</span></div><a class="seg build" href="#build-4" style="flex:45 1 0"><span class="t">Build 4</span><span class="m">45 min</span></a><a class="seg guide" href="#pitch" style="flex:25 1 0"><span class="t">Pitch</span><span class="m">25 min</span></a><a class="seg guide" href="#close" style="flex:15 1 0"><span class="t">Close</span><span class="m">15 min</span></a></div></div>
+<div class="lane-row"><div class="lbl">Session one<br><span class="meta" style="font-size:10.5px;color:var(--text-support)">230 min</span></div><div class="lane-track"><a class="seg guide" href="#welcome" style="flex:50 1 0"><span class="t">Open, setup</span><span class="m">50 min</span></a><div class="seg room" style="flex:20 1 0"><span class="m" style="margin:0">20 min</span></div><a class="seg build" href="#build-1" style="flex:45 1 0"><span class="t">Build 1</span><span class="m">45 min</span></a><div class="seg break" style="flex:20 1 0"><span class="t">Break</span><span class="m">20 min</span></div><div class="seg room" style="flex:20 1 0"><span class="m" style="margin:0">20 min</span></div><a class="seg build" href="#build-2" style="flex:45 1 0"><span class="t">Build 2</span><span class="m">45 min</span></a><a class="seg guide" href="#ship" style="flex:30 1 0"><span class="t">Ship</span><span class="m">30 min</span></a></div></div>
+<div class="lane-row"><div class="lbl">Session two<br><span class="meta" style="font-size:10.5px;color:var(--text-support)">225 min</span></div><div class="lane-track"><a class="seg guide" href="#between" style="flex:30 1 0"><span class="t">Open</span><span class="m">30 min</span></a><div class="seg room" style="flex:25 1 0"><span class="m" style="margin:0">25 min</span></div><a class="seg build" href="#build-3" style="flex:55 1 0"><span class="t">Build 3</span><span class="m">55 min</span></a><div class="seg break" style="flex:20 1 0"><span class="t">Break</span><span class="m">20 min</span></div><div class="seg room" style="flex:10 1 0"><span class="m" style="margin:0">10 min</span></div><a class="seg build" href="#build-4" style="flex:45 1 0"><span class="t">Build 4</span><span class="m">45 min</span></a><a class="seg guide" href="#pitch" style="flex:25 1 0"><span class="t">Pitch</span><span class="m">25 min</span></a><a class="seg guide" href="#pitch" style="flex:15 1 0"><span class="t">Close</span><span class="m">15 min</span></a></div></div>
 <div class="key"><span><i class="b"></i>Build, in this guide</span><span><i class="g"></i>Also in this guide</span><span><i class="r"></i>In the room, off the decks</span></div></div>
-<nav class="toc"><ol><li class="sec"><a href="#welcome">Welcome to your build.</a></li><li class="sec"><a href="#questions">Three questions.</a></li><li class="sec"><a href="#setup">Get set up.</a></li><li class="sec"><a href="#build-1">Build 1 · First pass at the agent</a></li><li><a href="#step-1.1"><span class="id">1.1</span>Read the trace, find the four faults</a></li><li><a href="#step-1.2"><span class="id">1.2</span>Make the loop hold</a></li><li><a href="#step-1.3"><span class="id">1.3</span>Make the tools route</a></li><li><a href="#step-1.4"><span class="id">1.4</span>All five shapes, numbers written down</a></li><li class="sec"><a href="#build-2">Build 2 · Your own tools</a></li><li><a href="#step-2.1"><span class="id">2.1</span>Your own tool, chosen unprompted</a></li><li><a href="#step-2.2"><span class="id">2.2</span>The same tool, over MCP</a></li><li class="sec"><a href="#ship">Pitch and ship</a></li><li class="sec"><a href="#between">Welcome back.</a></li><li class="sec"><a href="#build-3">Build 3 · Build the proof</a></li><li><a href="#step-3.1"><span class="id">3.1</span>Build the proof</a></li><li class="sec"><a href="#build-4">Build 4 · Pull the lever</a></li><li><a href="#step-4.1"><span class="id">4.1</span>Pull the lever, measure it</a></li><li class="sec"><a href="#pitch">Pitch the client</a></li><li class="sec"><a href="#close">What is provable now</a></li><li class="sec"><a href="#appendix-a">A · Working in one repo</a></li><li class="sec"><a href="#appendix-b">B · The five tickets</a></li><li class="sec"><a href="#appendix-c">C · The words of the build</a></li><li class="sec"><a href="#appendix-d">D · What this agent cannot do, and what stops it</a></li></ol></nav>
+<nav class="toc"><ol><li class="sec"><a href="#welcome">Welcome to your build.</a></li><li class="sec"><a href="#questions">Three questions.</a></li><li class="sec"><a href="#setup">Get set up.</a></li><li class="sec"><a href="#build-1">Build 1 · First pass at the agent</a></li><li><a href="#step-1.1"><span class="id">1.1</span>Read the trace, find the four faults</a></li><li><a href="#step-1.2"><span class="id">1.2</span>Make the loop hold</a></li><li><a href="#step-1.3"><span class="id">1.3</span>Make the tools route</a></li><li><a href="#step-1.4"><span class="id">1.4</span>All five shapes, numbers written down</a></li><li class="sec"><a href="#build-2">Build 2 · Your own tools</a></li><li><a href="#step-2.1"><span class="id">2.1</span>Your own tool, chosen unprompted</a></li><li><a href="#step-2.2"><span class="id">2.2</span>The same tool, over MCP</a></li><li class="sec"><a href="#ship">Ship it to the client</a></li><li class="sec"><a href="#between">Welcome back.</a></li><li class="sec"><a href="#build-3">Build 3 · Build the proof</a></li><li><a href="#step-3.1"><span class="id">3.1</span>Build the proof</a></li><li class="sec"><a href="#build-4">Build 4 · Make it scale</a></li><li><a href="#step-4.1"><span class="id">4.1</span>Pull the lever, measure it</a></li><li class="sec"><a href="#pitch">The value conversation</a></li><li class="sec"><a href="#appendix-a">A · Working in one repo</a></li><li class="sec"><a href="#appendix-b">B · The five tickets</a></li><li class="sec"><a href="#appendix-c">C · The words of the build</a></li><li class="sec"><a href="#appendix-d">D · What this agent cannot do, and what stops it</a></li></ol></nav>
 <section class="chapter" id="welcome">
 <span class="pill between">Start</span>
 <h2>Welcome to <strong>your build</strong>.</h2>
-<p class="lead">Welcome. You're the team Larkspur Airlines brought in, and this page is where the two sessions run from. Three things before the room comes back together, and they go in this order.</p>
+<p class="lead">Welcome. You're the team Larkspur Airlines brought in, and this page is where the two sessions run from. Three things before the room comes back together, in this order.</p>
 <div class="pb">
 <ul><li>Read the case study below.</li><li>Answer the three questions.</li><li>Get set up.</li></ul>
 </div>
 <div class="pb">
-<h4>Larkspur, in five lines</h4>
-<ul><li>A US carrier, about 19 million passengers a year, 1,150 people in the contact center.</li><li>About 4.2 million contacts a year. Disruption is 31% of them and 52% of contact-center cost.</li><li>Chat is 41% of contacts, so this agent's pool is about 530,000 disruption chats a year.</li><li>A human-handled contact costs them $6.90.</li><li>Two January storms and a senator's letter later, they went looking for help. You are the team they brought in.</li></ul>
+<h4>The client's issue</h4>
+<ul><li>A US carrier, about 19 million passengers a year, 1,150 people in the contact center.</li><li>About 4.2 million contacts a year. Disruption is 31% of them and 52% of contact-center cost.</li><li>Chat is 41% of contacts, so this agent's pool is about 530,000 disruption chats a year.</li><li>A human-handled contact costs them $6.90.</li></ul>
 </div>
 <div class="pb">
-<p>Those are the numbers a board reads, so they are the numbers your claim gets set against. The arithmetic behind them, including which single figure is an assumption rather than a fact, is written out in <code>data/americas/README.md</code>.</p>
-</div>
-<div class="pb">
-<h4>What she asked for</h4>
-<p>Priya Raghavan, their project manager, in the first meeting. That is not yet a spec.</p>
+<h4>The client's ask</h4>
+<p>Priya Raghavan, their project manager, in the first meeting.</p>
 <pre class="out">We want a GenAI chatbot that can handle rebooking
 so customers don't wait 40 minutes.</pre>
 </div>
 <div class="pb">
-<h4>What it became</h4>
-<p>600 transcripts, read by hand. 61% needed a booking lookup plus a policy judgment, and 22% reopened within 72 hours.</p>
-<p>That reframed the ask. Chat only, six rules, three signed hard gates. Hard means one failure blocks the release. Never an average.</p>
+<p>Three hard gates came out of it, signed in week 1. Hard means one failure blocks the release, never an average.</p>
 <div class="tbl"><table>
-<tr><th>The three hard gates, signed week 1</th></tr>
-<tr><td>0 invented flight facts</td></tr>
-<tr><td>100% tone safety</td></tr>
-<tr><td>0 irreversible actions without the customer's click</td></tr>
+<tr><th>The gate</th><th>What has to be true</th></tr>
+<tr><td>No invention</td><td>0 invented flight facts</td></tr>
+<tr><td>Every reply</td><td>100% tone safety</td></tr>
+<tr><td>Gated</td><td>0 irreversible actions without the customer's click</td></tr>
 </table></div>
 </div>
 <div class="pb">
-<h4>The two people you answer to</h4>
-<p>A gate nobody can prove is a gate nobody signed.</p>
+<h4>Your two contexts</h4>
 <div class="tbl"><table>
 <tr><th>Who</th><th>What they ask you</th></tr>
-<tr><td>Priya Raghavan · project manager</td><td>What it costs. When it is wrong. Who runs it in June. What you left out.</td></tr>
-<tr><td>Marcus Whitfield · head of ops</td><td>Per year at our volume. Who is accountable when it is wrong. The day your team leaves. Where the kill switch lives.</td></tr>
+<tr><td>Priya Raghavan · project manager</td><td>She wants it to work. She asks which model you should be on, and how you will prove it.</td></tr>
+<tr><td>Marcus Whitfield · head of ops</td><td>He asks what a year of this costs, and whose name is on it.</td></tr>
 </table></div>
 </div>
 <div class="pb">
 <h4>The five tickets</h4>
-<p>Five bookings, five shapes. A PNR is the booking reference, six characters, and these five are the set the pack calls Stage 1. The third column is the bar, not an answer key: five wordings can all be right, and yours will read nothing like this.</p>
+<p>Five bookings, five shapes, and the pack calls them Stage 1. A PNR is the six-character booking reference. The third column is the bar, not an answer key, so five wordings can all be right.</p>
+<p>Names, numbers, PNRs and policy live in <code>data/americas/</code>, and the record is the authority.</p>
 <div class="tbl"><table>
 <tr><th>PNR</th><th>Shape</th><th>What good looks like</th></tr>
 <tr><td><code>K7PQ2M</code></td><td>Clean cancellation</td><td>Holds a seat, then waits for the customer's click</td></tr>
@@ -215,11 +216,6 @@ so customers don't wait 40 minutes.</pre>
 <tr><td><code>G2HL9V</code></td><td>Out of scope, a group of 12</td><td>Escalates. It does not resolve, and that is the pass</td></tr>
 <tr><td><code>R8KD3F</code></td><td>Abuse plus a legal threat</td><td>Comes back calm and helpful. There is no tone gate yet</td></tr>
 </table></div>
-</div>
-<div class="pb">
-<h4>Where the facts live</h4>
-<p>Names, numbers, PNRs and policy live in <code>data/americas/</code>, and the record is the authority.</p>
-<p>An answer the agent cannot point at a record for is an invented flight fact, which is gate one.</p>
 </div>
 <p class="closer">Read it? Now the three questions.</p>
 </section>
@@ -246,46 +242,30 @@ so customers don't wait 40 minutes.</pre>
 <section class="chapter" id="setup">
 <span class="pill between">Before you come back</span>
 <h2>Get <strong>set up</strong>.</h2>
-<p class="lead">Your pod needs one repo that everyone can reach. One person makes it from the template and invites the rest, and everyone else clones it and runs setup. Five minutes at the end of the breakout, and by the time you come back you will want to be through all of it. If something will not go green, say so when you come back and it gets sorted before Build 1 starts.</p>
+<p class="lead">Your pod needs one repo that everyone can reach, and READY on every laptop before Build 1 starts.</p>
 <div class="pb">
-<h4>1. One person makes the pod repo</h4>
-<p>The room lead posts the template link in chat. One person in the pod opens it, and nobody else does anything until the repo URL is in the pod thread.</p>
-<p>That one person, on GitHub. Hit <strong>Use this template</strong>, then <strong>Create a new repository</strong>. Owner is their own account. Set it to Private, then create it.</p>
-<p>Then <strong>Settings</strong>, <strong>Collaborators</strong>, <strong>Add people</strong>. Every podmate by GitHub username, and the room lead's handle as well. That handle is how the overnight review reaches your repo, and it cannot be fixed that night.</p>
-<p>Post the repo URL in the pod thread.</p>
-<p>Everyone else has an invitation email waiting. Accept it before you try to clone, because a private repo refuses you until you do.</p>
-</div>
-<div class="pb">
-<h4>2. Everyone clones it and opens it</h4>
-<p>How you'll work. Three ways to run this, and all three end up in the same repo typing the same commands. Pick the one you already live in and stay in it for both sessions.</p>
-<p>The build site carries these same three columns and remembers the one you pick, so the rest of this item and item 3 read in your own surface. On paper all three sit side by side.</p>
-<div class="tbl"><table>
-<tr><th></th><th>Terminal and any editor</th><th>VS Code with the Claude Code extension</th><th>Claude desktop app, Code tab</th></tr>
-<tr><td>Where you type</td><td>Your own terminal, and any editor you like for <code>agent.py</code>.</td><td>The terminal inside VS Code, and VS Code for <code>agent.py</code>.</td><td>The chat in the Code tab. Claude runs the commands, and the terminal panel beside the chat shows what it ran.</td></tr>
-<tr><td>Where Claude Code lives</td><td><code>claude</code>, typed in the repo folder.</td><td>The Claude icon in the left bar, or <code>claude</code> in that terminal.</td><td>The Code tab is Claude Code. You are already in it.</td></tr>
-</table></div>
-</div>
-<div class="pb">
-<p>One command is the same on all three, and it is this one. Clone it rather than downloading a zip, because the checks read git history.</p>
+<ul><li>All pod members open GitHub.</li><li>One person creates the pod repo from the template link the room lead posted. <strong>Use this template</strong>, owner their own account, Private. Then <strong>Settings</strong>, <strong>Collaborators</strong>, and every podmate plus the room lead's handle.</li><li>That person posts the repo URL in the pod thread.</li><li>Everyone accepts the invitation, then clones it. A private repo refuses you until you have accepted.</li></ul>
 <pre class="cmd"><span class="p">$ </span>git clone &lt;your pod repo URL&gt;</pre>
+</div>
+<div class="pb">
+<h4>Open it your way</h4>
+<p>Three surfaces, the same repo, the same commands. Pick the one you already live in and stay in it for both sessions.</p>
 <div class="tbl"><table>
 <tr><th></th><th>Terminal and any editor</th><th>VS Code with the Claude Code extension</th><th>Claude desktop app, Code tab</th></tr>
-<tr><td>Clone it</td><td>Open your terminal. On macOS that is Terminal, on Windows it is PowerShell. Run <code>git clone &lt;URL&gt;</code>, then <code>cd</code> into the folder it made. If git asks you to sign in, use your GitHub login.</td><td>Install the Claude Code extension from the Extensions view if it is not there already, publisher Anthropic, and sign in. Then <strong>Terminal</strong>, <strong>New Terminal</strong>, and run <code>git clone &lt;URL&gt;</code> in it.</td><td>Clone first in a normal terminal, Terminal on macOS or PowerShell on Windows. Run <code>git clone &lt;URL&gt;</code> there.</td></tr>
-<tr><td>Open the folder</td><td>The <code>cd</code> put you in it. Edit <code>agent.py</code> later in whatever editor you like.</td><td><strong>File</strong>, <strong>Open Folder</strong>, and pick the folder git made. Open a new terminal again now the folder is open, and it starts inside the repo.</td><td>In the Claude app, open the Code tab and start a session in the folder git made.</td></tr>
-<tr><td>Start Claude Code</td><td>Type <code>claude</code> in that folder. The first time it asks whether to trust the folder, say yes, or none of the repo's settings apply.</td><td>The Claude icon in the left bar, or <code>claude</code> in that terminal. Say yes to the trust prompt the first time.</td><td>The Code tab is Claude Code. Ask it to run a command and it runs it, and the terminal panel beside the chat shows what it ran. Say yes when it asks to trust the folder. When it runs <code>run.py</code> for you, the trace is still yours to read, in full.</td></tr>
+<tr><td>Where you type</td><td>Your own terminal, and any editor for <code>agent.py</code>.</td><td>The terminal inside VS Code.</td><td>The chat in the Code tab. Claude runs the commands.</td></tr>
+<tr><td>Open the folder</td><td><code>cd</code> into the folder git made.</td><td><strong>File</strong>, <strong>Open Folder</strong>, then a new terminal.</td><td>Start a session in the folder git made.</td></tr>
+<tr><td>Start Claude Code</td><td>Type <code>claude</code> there. Say yes to the trust prompt.</td><td>The Claude icon in the left bar. Say yes to the trust prompt.</td><td>You are already in it. Say yes to the trust prompt.</td></tr>
 </table></div>
 </div>
 <div class="pb">
-<h4>3. Run setup until it says READY</h4>
-<p>Run it, work down the lines it marks, run it again. Every failure it prints names its own fix. Keep going until the last line reads READY.</p>
-<p><code>--fix</code> builds the isolated environment and installs the dependencies for you, then prints the two lines to run next.</p>
-<p>There is no offline path in this pack, so a credential that does not work is a blocker rather than an inconvenience.</p>
+<h4>Run setup</h4>
+<ul><li>Run <code>python3 setup.py</code> until the last line reads READY.</li><li><code>--fix</code> when it tells you to. It builds the environment and installs what is missing.</li></ul>
 <pre class="cmd"><span class="p">$ </span>python3 setup.py
 <span class="p">$ </span>python3 setup.py --fix</pre>
-<div class="tbl"><table>
-<tr><th></th><th>Terminal and any editor</th><th>VS Code with the Claude Code extension</th><th>Claude desktop app, Code tab</th></tr>
-<tr><td>Run it</td><td><code>python3 setup.py</code> in the repo folder.</td><td><code>python3 setup.py</code> in the terminal that opened inside the repo.</td><td>Ask Claude to run <code>python3 setup.py</code>, and read the last line yourself.</td></tr>
-</table></div>
+</div>
+<div class="pb">
+<h4>If it will not go green</h4>
+<ul><li>Ask Claude Code to fix it. Paste the failing line in and let it work.</li><li>If you are truly stuck, get the room lead.</li></ul>
 </div>
 <div class="pb">
 <h4>What READY checks</h4>
@@ -302,11 +282,6 @@ so customers don't wait 40 minutes.</pre>
 <tr><td>A credential</td><td>One the SDK can read. An unset key does not mean you have none.</td></tr>
 <tr><td>One live call</td><td>A real request to Claude that comes back with text.</td></tr>
 </table></div>
-</div>
-<div class="pb">
-<h4>If it will not go green</h4>
-<p>Two tries, then stop debugging quietly. Post the exact failing line in your pod thread, with the 10 lines above it, and someone comes to you.</p>
-<p>Say so when you come back rather than sitting on it. Nobody loses a build over setup, and reading the agent needs no environment at all.</p>
 </div>
 <p class="closer">READY on every laptop? Come back to the room.</p>
 </section>
@@ -517,7 +492,7 @@ That code is your receipt for step 2.2. Paste it into the build site to bank it.
 https://virtual.partnerbasecamp.com/build/</pre></div>
 <div class="row ifnot"><span class="k meta">If not</span><div class="tbl"><table><tr><th>You see</th><th>Where to look</th></tr><tr><td>The tool shows up twice</td><td>The local copy is still registered. One name, one owner.</td></tr><tr><td>Nothing is tagged <code>via mcp</code></td><td>Is the server process starting at all? Everything it wants to say to a human goes to stderr, so read stderr.</td></tr><tr><td>It fires, but tokens in went up</td><td>Count the schemas rather than arguing about the conversation: <code>python3 run.py --tool-tax</code>. How many tools went up on that turn, which of them are new, and is one of them the same tool twice?</td></tr></table></div></div>
 <div class="row ahead"><span class="k meta">If you are ahead</span><p><strong>One server, many hosts.</strong> Register the same server in Claude Code, ask it when <code>J5NU8S</code> can fly, and watch a host you did not write drive your server. Then take it out again.</p><p><code>claude mcp add larkspur -- python3 support/mcp_server.py</code>, then <code>claude mcp remove larkspur</code> when you are done.</p></div>
-<div class="row next"><span class="k meta">Next</span><p>Pitch and ship. The build stops and the claim starts.</p></div>
+<div class="row next"><span class="k meta">Next</span><p>Ship it to the client. The build stops and the claim starts.</p></div>
 </article>
 <div class="pb">
 <h4>Provable now, and not yet</h4>
@@ -531,32 +506,28 @@ https://virtual.partnerbasecamp.com/build/</pre></div>
 </section>
 <section class="chapter" id="ship">
 <span class="pill s1">Session one</span>
-<h2>Pitch and <strong>ship</strong></h2>
-<p class="lead">The deliverable is a repo, not a recording. Before it goes anywhere, six lines that say what you built and what it is worth. One of those six names what is broken.</p>
+<h2><strong>Ship</strong> it to the client</h2>
+<p class="lead">The client asked for an update she can review before the next session. What you send is the repo, with <code>PITCH.md</code> filled in.</p>
 <div class="pb">
-<h4>The pitch, six lines</h4>
-<p>"Compared to what?" is the question that separates a demo from a claim. Which of your six survives it?</p>
+<h4>What she asked for</h4>
+<p>One repo per pod, pushed, with the six lines written and the room lead on the collaborator list.</p>
+</div>
+<div class="pb">
+<h4>Four questions she will read it against</h4>
 <div class="tbl"><table>
-<tr><th>Line</th><th>What it carries</th></tr>
-<tr><td><code>Built:</code></td><td>What we built, and what you connected.</td></tr>
-<tr><td><code>Does:</code></td><td>What it does for a stranded customer, in one line.</td></tr>
-<tr><td><code>Number:</code></td><td>Before and after, off your own trace, with a unit and a denominator. The gate reads this line by name and wants all three: the figure, what it is measured in, and what it is per.</td></tr>
-<tr><td><code>Guardrail:</code></td><td>The one you can prove, and how you proved it.</td></tr>
-<tr><td><code>Next:</code></td><td>What you would do with another week.</td></tr>
-<tr><td><strong><code>Still broken:</code></strong></td><td>The gap you name before anyone finds it. Scored like the other five. The gate reads this label by name.</td></tr>
+<tr><th>She asks</th><th>What she means</th></tr>
+<tr><td>What it costs</td><td>Per resolved contact, against the $6.90 a human contact costs them.</td></tr>
+<tr><td>When it is wrong</td><td>The first untrue thing it says, and what happens after that.</td></tr>
+<tr><td>Who runs it</td><td>In June, after your team has left.</td></tr>
+<tr><td>What you left out</td><td>The scope you cut, and why you cut it.</td></tr>
 </table></div>
 </div>
 <div class="pb">
-<h4>Three things are provable at this point</h4>
-<p>Accuracy and dollars are not on that list. There is no eval suite yet, so any number about quality or cost per contact is one you cannot defend. Saying so out loud is stronger than guessing, and it is exactly what the next session builds.</p>
-<p>Every build ends with a box like this one. Read the Build 4 version twice: it is the build where a number exists for the first time, and the first number is the easiest one to round up.</p>
-<ul><li>Your Stage 1 pass rate.</li><li>Your before and after turn count and context cost, measured by you.</li><li>A forged confirmation token being refused, while a real customer click is accepted.</li></ul>
-</div>
-<div class="pb">
-<h4>The template, then make every line yours</h4>
-<p>This is the shipped <code>PITCH.md</code>, byte for byte. Fill every line after the colon. <code>Lever:</code> stays as the menu until Build 4 picks one word; the gates read <code>Still broken:</code> and <code>Lever:</code> by name, so keep both labels exactly.</p>
-<p>What each line wants. Built: what we built, one line. Does: what it does for a stranded customer. Number: before to after, with a unit and a denominator, measured on what. Guardrail: the one we can prove, and how. Next: what we would do with another week. Still broken: the gap we are naming before anyone finds it. One person types the pitch. Agree who: one hand per pod, because merge conflicts eat the whole thing.</p>
-<p>The 4 lines under <code>## Priya asked</code> are not for today. Your pod answers them together at the open of session two.</p>
+<h4>Your pitch file, six lines</h4>
+<p>This is the shipped <code>PITCH.md</code>, byte for byte. Fill every line after the colon.</p>
+<p><code>Lever:</code> stays as the menu until Build 4 picks one word. The gates read <code>Still broken:</code> and <code>Lever:</code> by name, so keep both labels exactly.</p>
+<p>One person types it. Agree who, because merge conflicts eat the whole thing.</p>
+<p>The four lines under <code>## Priya asked</code> are not for today. Your pod answers them at the open of the next session.</p>
 <pre class="out"># PITCH.md
 
 Six lines and a lever. Both of the last two are scored.
@@ -575,39 +546,51 @@ Costs:
 Wrong:
 Runs it:
 Left out:</pre>
+<div class="tbl"><table>
+<tr><th>Line</th><th>What it carries</th></tr>
+<tr><td><code>Built:</code></td><td>What we built, and what we connected.</td></tr>
+<tr><td><code>Does:</code></td><td>What it does for a stranded customer.</td></tr>
+<tr><td><code>Number:</code></td><td>Before and after, off your own trace. A figure, a unit, and what it is per.</td></tr>
+<tr><td><code>Guardrail:</code></td><td>The one you can prove, and how you proved it.</td></tr>
+<tr><td><code>Next:</code></td><td>What you would do with another week.</td></tr>
+<tr><td><strong><code>Still broken:</code></strong></td><td>The gap you name before anyone finds it. Scored like the other five.</td></tr>
+</table></div>
 </div>
 <div class="pb">
-<h4>Publish the pod's canon</h4>
-<p>One person pushes the canon at the end of the build. Agree who before the clock runs out. They tag last, once the canon is on the remote. The readout is generated from the agent being published, so it describes the version the pod is about to stand on.</p>
+<h4>Say what you can prove</h4>
+<p>Sort your own run into the three columns. A number nobody measured is one you cannot defend, so it belongs in the middle one.</p>
+<div class="tbl"><table>
+<tr><th>Can claim</th><th>Cannot yet</th><th>Still broken</th></tr>
+<tr><td>5 shapes resolved, and the token cost either side</td><td>Accuracy, dollars per contact, production volume</td><td>No tone gate on the way in</td></tr>
+<tr><td>Cancellation, delay, missed connection, out of scope, abusive message. Measured by you.</td><td>You could measure all of it. You have not yet.</td><td>An abusive message still gets a calm, helpful answer. Say it first.</td></tr>
+</table></div>
+</div>
+<div class="pb">
+<h4>Ship it</h4>
+<p>One person pushes the canon. Agree who before the clock runs out, and they tag last, once the canon is on the remote.</p>
 <pre class="cmd"><span class="p">$ </span>python3 readout.py
 <span class="p">$ </span>python3 pod_sync.py --push-canon
 <span class="p">$ </span>git tag v1 &amp;&amp; git push origin HEAD --tags</pre>
 </div>
 <div class="pb">
-<p>Then everyone else takes it, once that person has said it is up. Take a canon nobody has pushed yet and you pull down the last build's agent.</p>
+<p>Everyone else takes it, once that person has said it is up.</p>
 <pre class="cmd"><span class="p">$ </span>python3 pod_sync.py --take-canon</pre>
 </div>
 <div class="pb">
-<h4>Post the repo URL</h4>
-<p>Post the repo URL in the pod thread. That is the list the overnight review runs from.</p>
+<p>Post the repo URL in the pod thread. That is the list the review runs from.</p>
 </div>
 <div class="pb">
 <h4>Prove the key never travelled</h4>
-<p>The first prints <code>.env</code>. The second must print nothing at all. Anything it prints is an incident rather than a tidy-up: stop, and say so out loud.</p>
+<p>The first prints <code>.env</code>. The second prints nothing at all, and anything it prints is an incident rather than a tidy-up.</p>
 <pre class="cmd"><span class="p">$ </span>git check-ignore .env &amp;&amp; git log --all --oneline -- .env</pre>
 </div>
 <div class="pb">
-<h4>And this is what gets run on it</h4>
-<p>The rubric is public and it runs on the shared screen. Overclaiming scores worse than a gap.</p>
+<h4>What the review checks</h4>
+<ul><li><strong>Runs.</strong> Clone it, add a key, one turn works.</li><li><strong>Generalizes.</strong> A message you never tested still lands.</li><li><strong>Tools.</strong> Yours are there, and the model chose them.</li><li><strong>Guardrail.</strong> Something irreversible is gated.</li><li><strong>Claim.</strong> <code>PITCH.md</code> says only what the repo proves.</li></ul>
+</div>
+<div class="pb">
+<p>It comes back as <code>FEEDBACK.md</code> in your repo, and that is where the next session starts. Overclaiming scores worse than a gap.</p>
 <p>Nothing is required between the sessions. The next session starts from the pod's canon, not from whatever your laptop still has.</p>
-<div class="tbl"><table>
-<tr><th>Dimension</th><th>What earns the 2</th></tr>
-<tr><td>Runs</td><td>The loop gate and the generalization gate both banked.</td></tr>
-<tr><td>Generalizes</td><td>All five Stage 1 shapes, not the easy one.</td></tr>
-<tr><td>Tools</td><td>Every description says when to call it and what comes back.</td></tr>
-<tr><td>Guardrail</td><td>Tested, not judged. A forged token is refused.</td></tr>
-<tr><td>Claim</td><td>A number you measured, and a claim sized to it.</td></tr>
-</table></div>
 </div>
 </section>
 <section class="chapter" id="between">
@@ -620,8 +603,8 @@ Left out:</pre>
 <div class="tbl"><table>
 <tr><th>The block</th><th>What your pod walks out with</th></tr>
 <tr><td>Build 3 · build the proof</td><td>An eval suite with a case you wrote yourself, and a verdict you would read out loud even when it says BLOCKED.</td></tr>
-<tr><td>Build 4 · pull the lever</td><td>One number moved on purpose, with a before and after off your own laptop.</td></tr>
-<tr><td>Pitch the client</td><td>Somebody in this room plays Priya and your pod pitches her. The questions you ask when it is your turn to be the client are scored too.</td></tr>
+<tr><td>Build 4 · make it scale</td><td>One number moved on purpose, with a before and after off your own laptop.</td></tr>
+<tr><td>The value conversation</td><td>Somebody in this room plays Priya and your pod pitches her. The questions you ask when it is your turn to be the client are scored too.</td></tr>
 <tr><td>Close · you proved it</td><td>The three lanes side by side, filled live off the pods' own bench numbers.</td></tr>
 </table></div>
 </div>
@@ -737,7 +720,7 @@ https://virtual.partnerbasecamp.com/build/</pre></div>
 </section>
 <section class="chapter" id="build-4">
 <span class="pill s2">Session two</span>
-<h2>Build 4 · <strong>Pull the lever</strong></h2>
+<h2>Build 4 · <strong>Make it scale</strong></h2>
 <p class="lead">Proof came first for a reason. You cannot bank a saving you have no way to read. Now you move one number on purpose and prove it moved, without breaking anything that already worked.</p>
 <div class="walkout"><span class="meta">You walk out with</span><p>one declared lever, a before and after pair off your own laptop, and a movement you would put in front of somebody who owns the budget.</p></div>
 <div class="pb">
@@ -799,7 +782,7 @@ https://virtual.partnerbasecamp.com/build/</pre></div>
 <span class="p">$ </span>python3 bench.py --label s2-after --stage 2 --runs 3</pre></li><li>Pull one lever. The one you declared.</li><li>Bench again and diff the two labels. Same stage and the same number of runs on both sides, or the comparison is not one. Then read the cache line under the table. A run that read a cache it never wrote is priced on a discount an idle agent in production never gets. <code>bench.py</code> says so out loud when it happens.<pre class="cmd"><span class="p">$ </span>python3 bench.py --label after --stage 1 --runs 3 --cold
 <span class="p">$ </span>python3 bench.py --compare before after</pre></li><li>Walk the five shapes again before you call it done. A win you did not recheck is a claim you cannot make.<pre class="cmd"><span class="p">$ </span>python3 run.py --all --trace</pre></li><li>Then take the gate.<pre class="cmd"><span class="p">$ </span>python3 verify.py 4.1</pre></li><li>Back in the demo: the number at the top of the panel fills in, with what it is per and what it is measured against, and the before and after rows fill in under it. That is the sponsor's view of the lever you pulled.</li><li>One person pushes the canon at the end of the build. The last hand. Agree who before the clock runs out. Everyone else takes it.<pre class="cmd"><span class="p">$ </span>python3 readout.py
 <span class="p">$ </span>python3 pod_sync.py --push-canon</pre></li></ol></div>
-<div class="row done"><span class="k meta">You will know it worked when</span><p>Your declared lane's number moved at least 10% in the right direction, and Stage 1 still resolves 5/5. Ten percent is there so noise does not read as a win. A 70% cost win that breaks a shape fails. The comparable check is the one people trip over: it wants the same stage, the same model, and at least three runs per shape on both sides, because one run per shape is a sample and the floor it would be clearing is smaller than the noise. The first check reads the <code>Lever:</code> line in <code>PITCH.md</code>. The numbers below are one reference run on the cost lane; yours will differ.</p><pre class="cmd"><span class="p">$ </span>python3 verify.py 4.1</pre><pre class="out"><span class="head">Step 4.1: Build 4 · Pull the lever</span>
+<div class="row done"><span class="k meta">You will know it worked when</span><p>Your declared lane's number moved at least 10% in the right direction, and Stage 1 still resolves 5/5. Ten percent is there so noise does not read as a win. A 70% cost win that breaks a shape fails. The comparable check is the one people trip over: it wants the same stage, the same model, and at least three runs per shape on both sides, because one run per shape is a sample and the floor it would be clearing is smaller than the noise. The first check reads the <code>Lever:</code> line in <code>PITCH.md</code>. The numbers below are one reference run on the cost lane; yours will differ.</p><pre class="cmd"><span class="p">$ </span>python3 verify.py 4.1</pre><pre class="out"><span class="head">Step 4.1: Build 4 · Make it scale</span>
 
   <span class="ok">✓</span> PITCH.md: the 'Lever:' line names one lane (cost)
   <span class="ok">✓</span> a 'before' bench exists
@@ -814,7 +797,7 @@ https://virtual.partnerbasecamp.com/build/</pre></div>
 <div class="row ifnot"><span class="k meta">If not</span><div class="tbl"><table><tr><th>You see</th><th>Where to look</th></tr><tr><td>The number went the wrong way</td><td>Read the bench file before you touch the agent again. Cache read and written, tokens, turns. The row that moved is not always the row you aimed at.</td></tr><tr><td>The bench says <code>cache: not used on any turn</code></td><td>Nothing has been marked for reuse, so a stable prefix has nothing to hit. That is not a 0% hit rate; it is no cache at all. What would the API have to be told, about the part of the request that does not change, before it can keep anything between calls?</td></tr><tr><td>Caching reports a 0% hit rate</td><td>Something is being kept and nothing is ever found again. Print what goes out at the very top of every request, two calls in a row, and ask which characters are not identical.</td></tr><tr><td>Cost fell and latency rose</td><td>Check how many runs per shape are behind both numbers before you write that down. The reference lever read a fifth slower at one run each and no change at three. If it holds at three runs, it is a real charge and it belongs in the pitch: a lever that only shows its buys is a claim the client will find the charge on.</td></tr><tr><td>The bench says the run read a cache it did not pay to write</td><td>Somebody already paid for that cache, minutes ago, and this run read it for free. Production re-pays that write after every idle gap. Re-bench with <code>--cold</code>, or put the word warm next to the number in the pitch.</td></tr><tr><td>The gate says the two runs are not comparable</td><td>Read the stage, the runs per shape, and the model it prints for each side. One run per shape is a sample, not a measurement, and the gate will not compare below three.</td></tr></table></div></div>
 <div class="row claude"><span class="k meta">In Claude Code</span><p>Type <code>claude</code> in the repo folder, then <code>/build</code>. After the before bench, while you are deciding which lever to pull.</p><pre class="out">Read .workshop/bench-before.json and my latest trace, and tell me where the tokens go per turn. Ask me which lever I think that points to, and why, before you say yours. Do not change agent.py.</pre></div>
 <div class="row ahead"><span class="k meta">If you are ahead</span><p><strong>The second lever.</strong> Leave <code>before</code> and <code>after</code> untouched, they are your banked pair. Pull a second lever, bench it as <code>after2</code>, and compare <code>after</code> against <code>after2</code>. The payoff is not the row that improved. It is the row that got worse, with its percentage. That is the Charges column, on your own build.</p><p>The row that got worse, named with its number, in <code>PITCH.md</code>.</p></div>
-<div class="row next"><span class="k meta">Next</span><p>Pitch the client. Somebody who owns a budget is about to ask you what a year of this costs.</p></div>
+<div class="row next"><span class="k meta">Next</span><p>The value conversation. Somebody who owns a budget is about to ask you what a year of this costs.</p></div>
 </article>
 <div class="pb">
 <h4>Provable now, and not yet</h4>
@@ -829,10 +812,11 @@ https://virtual.partnerbasecamp.com/build/</pre></div>
 </section>
 <section class="chapter" id="pitch">
 <span class="pill s2">Session two</span>
-<h2>Pitch <strong>the client</strong></h2>
+<h2>The value <strong>conversation</strong></h2>
 <p class="lead">No neutral audience. Whoever is not pitching is the client, and clients own budgets. You are paired across lanes, so the client opposite you moved a different number and knows exactly where your claim gets thin.</p>
 <div class="pb">
-<h4>How the twenty five minutes run</h4>
+<h4>Your role play, in 25 minutes</h4>
+<p>You pitch once. You sit in the client's chair once.</p>
 <div class="tbl"><table>
 <tr><th>Phase</th><th>Min</th><th>What happens</th></tr>
 <tr><td>You pitch</td><td>5</td><td>Demo the surface, state the claim, name the caveat</td></tr>
@@ -844,16 +828,23 @@ https://virtual.partnerbasecamp.com/build/</pre></div>
 </table></div>
 </div>
 <div class="pb">
-<h4>Three things go in with you</h4>
-<p>Claim only what your evidence shows. "We did not measure that" beats a guess, and the caveat is scored, so a pod that hides a gap loses more than a pod that owns one.</p>
-<ul><li>One claim. A number, its unit and its denominator, on the one metric your pod declared.</li><li>Two numbers. Before and after, straight off your own two bench files.</li><li>One caveat. What you did not measure, named by you before she finds it.</li></ul>
+<h4>Your five minutes</h4>
+<ul><li>Open with the surface running. A demo that works buys more credit in the first thirty seconds than any number you say after it.</li><li>State the claim. One number, its unit, and what it is per.</li><li>Give the two numbers, before and after, off your own bench files.</li><li>Name the caveat, the thing you did not measure.</li><li>Then stop. The four minutes after this are theirs.</li></ul>
+<p class="rule"><span class="meta">5 minutes on the clock</span></p>
 </div>
 <div class="pb">
-<h4>Pick a persona, ask two questions</h4>
-<p>If your number is cost or speed, rehearse with Marcus. He is the harder room. He asks what a year of this costs and whose name is on it.</p>
-<p>Your questions are graded too. Four soft ones and the room learns nothing. Ask them the question you would least like asked of your own build.</p>
+<h4>What you bring</h4>
+<ul><li><strong>1 claim.</strong> A number, its unit and its denominator, on the one metric your pod declared.</li><li><strong>2 numbers.</strong> Before and after, straight off your own two bench files.</li><li><strong>1 caveat.</strong> What you did not measure, named by you before she finds it.</li></ul>
+</div>
+<div class="pb">
+<p>The caveat is scored, so a pod that hides a gap loses more than a pod that owns one.</p>
+</div>
+<div class="pb">
+<h4>The client team, and where they push</h4>
+<p>Pick one of them before the pitch starts, and ask two questions off the axes.</p>
 <div class="tbl"><table>
 <tr><th>The axis</th><th>Priya · project manager</th><th>Marcus · head of ops</th></tr>
+<tr><td>Sounds like</td><td>"Which model should we be on, and how will you prove it?"</td><td>"What does a year of this cost, and whose name is on it?"</td></tr>
 <tr><td><code>cost</code></td><td>Per resolved contact</td><td>Per year, at our volume</td></tr>
 <tr><td><code>wrong</code></td><td>The first untrue thing it says</td><td>Who is accountable when it is</td></tr>
 <tr><td><code>operate</code></td><td>Who runs it in June</td><td>The day your team leaves</td></tr>
@@ -861,74 +852,50 @@ https://virtual.partnerbasecamp.com/build/</pre></div>
 </table></div>
 </div>
 <div class="pb">
-<h4>And one more chair, the one that can stop it</h4>
-<p>Priya and Marcus both want this to work. The third person in the room does not, yet, and they can end it in one meeting. Ask all 3 of these when you are the client, and have all 3 answered when you are not.</p>
+<ul><li>If your number is cost or speed, take Marcus. He is the harder room.</li><li>Your questions are graded too. Four polite questions and a compliment is how this block gets wasted.</li></ul>
+</div>
+<div class="pb">
+<h4>The third chair</h4>
+<p>Priya and Marcus both want this to work. The third person in the room does not, yet, and they can end it in one meeting.</p>
+<p>Ask all 3 when you are the client, and have all 3 answered when you are not.</p>
 <div class="tbl"><table>
 <tr><th>The question</th><th>Where your answer comes from</th></tr>
-<tr><td>Whose data does it touch?</td><td>Appendix D's reads table. <code>lookup_booking</code> refuses a name that is not on the booking, <code>search_alternatives</code> takes the PNR alone, and the one read that is not fenced to the customer's own booking is <code>get_flight_status</code>. Name that one yourself.</td></tr>
-<tr><td>What happens after the first untrue answer?</td><td>Which gate catches it, what the customer sees next, and where the case goes. <code>escalate_to_human</code> files a written summary, and <code>send_confirmation</code> is the only write with no threshold, so it carries whatever you got wrong.</td></tr>
-<tr><td>Who signs a policy change?</td><td>The policy table has a named owner and a version. A rule change is a row edit with a changelog line, not a prompt release, and that is the answer that makes this operable in June.</td></tr>
+<tr><td>Whose data does it touch?</td><td>Appendix D's reads table. <code>get_flight_status</code> is the one read that is not fenced to the customer's own booking, and you name it yourself.</td></tr>
+<tr><td>What happens after the first untrue answer?</td><td>Which gate catches it and what the customer sees next. <code>send_confirmation</code> is the only write with no threshold.</td></tr>
+<tr><td>Who signs a policy change?</td><td>A row edit with a changelog line, against a named owner and a version. A prompt release is not a policy change.</td></tr>
 </table></div>
 </div>
 <div class="pb">
-<h4>Three lines, filed where the work lives</h4>
-<p>A number you would take to your own client, a claim you would not sign, and a gap. Filed as a signed issue on their repo, where the build lives, rather than in a chat that closes when the session does.</p>
-<p>Then read the one on yours before the close. Every pod leaves with a read on their work that nobody running the room wrote.</p>
-</div>
-</section>
-<section class="chapter" id="close">
-<span class="pill s2">Session two</span>
-<h2>What is <strong>provable now</strong></h2>
-<p class="lead">Be precise about the claim. That precision is the last thing this build teaches, and it is the half that travels.</p>
-<div class="pb">
-<h4>Provable, and not yet</h4>
-<p>That is the honest state of most week-four engagements.</p>
+<h4>Everyone writes</h4>
 <div class="tbl"><table>
-<tr><th>Provable</th><th>Not yet</th></tr>
-<tr><td>Three gated eval cases, authored and run</td><td>Accuracy at volume</td></tr>
-<tr><td>Your own before and after on a metric you chose</td><td>Real customer traffic</td></tr>
-<tr><td>A forged confirmation token refused</td><td>Anything at production scale</td></tr>
+<tr><th>The line</th><th>What it is</th></tr>
+<tr><td>A number you would take to your own client</td><td>Off their run, not off their slide. One you would repeat with your own name on it.</td></tr>
+<tr class="ansrow"><td colspan="2"><span class="al">A number you would take to your own client</span><div class="rules"><i></i><i></i><i></i></div></td></tr>
+<tr><td>A claim you would not sign</td><td>The one their evidence does not carry yet.</td></tr>
+<tr class="ansrow"><td colspan="2"><span class="al">A claim you would not sign</span><div class="rules"><i></i><i></i><i></i></div></td></tr>
+<tr><td>A gap</td><td>The thing you would want closed before this goes near a customer.</td></tr>
+<tr class="ansrow"><td colspan="2"><span class="al">A gap</span><div class="rules"><i></i><i></i><i></i></div></td></tr>
 </table></div>
+<p class="whereto"><span class="meta">Goes to</span> an issue on the other pod's repo</p>
 </div>
 <div class="pb">
-<h4>Two sessions, one agent</h4>
+<p>File the paste as an issue on the other pod's repo, then read the one filed on yours before the close.</p>
+</div>
+<div class="pb">
+<h4>Before you close the laptop: ACCOUNT.md</h4>
+<p>Three lines, in your repo at the root, and nobody can write them for you. Fill them here, copy them into <code>ACCOUNT.md</code>, and commit the file with the readout.</p>
 <div class="tbl"><table>
-<tr><th>Session one · done</th><th>Session two · done</th><th>From here · yours</th></tr>
-<tr><td><strong>Build.</strong> The harness: the loop, the tools, and one tool you wrote yourself.</td><td><strong>Prove.</strong> Eval cases, a grader, and a number that moved.</td><td><strong>Scale.</strong> Nobody in this room does that part for you.</td></tr>
+<tr><th></th><th>The line</th><th>What it is</th></tr>
+<tr><td>Account</td><td>The account you take this to</td><td>A logo. Not a segment, not a vertical.</td></tr>
+<tr class="ansrow"><td colspan="3"><span class="al">Account</span><div class="rules"><i></i><i></i><i></i></div></td></tr>
+<tr><td>Workflow</td><td>The job it would do there</td><td>One job you understand end to end: who starts it, what it reads, what it may change, what stays human.</td></tr>
+<tr class="ansrow"><td colspan="3"><span class="al">Workflow</span><div class="rules"><i></i><i></i><i></i></div></td></tr>
+<tr><td>Date</td><td>When you have the conversation</td><td>A date inside 30 days that is already in somebody's diary, or about to be.</td></tr>
+<tr class="ansrow"><td colspan="3"><span class="al">Date</span><div class="rules"><i></i><i></i><i></i></div></td></tr>
 </table></div>
+<p class="whereto"><span class="meta">Goes to</span> ACCOUNT.md in your repo</p>
 </div>
-<div class="pb">
-<h4>Write it down now</h4>
-<p><code>ACCOUNT.md</code> is in your repo, at the root, with 3 fields and nothing else in it. Fill them before you close the laptop, while the build is still in your hands, and commit it with the readout.</p>
-<pre class="out">Account:
-Workflow:
-Date:</pre>
-<div class="tbl"><table>
-<tr><th>The line</th><th>What counts</th></tr>
-<tr><td><code>Account:</code></td><td>A logo. Not a segment, not a vertical, not "a large insurer".</td></tr>
-<tr><td><code>Workflow:</code></td><td>One job you understand end to end, the way you now understand a disruption chat: who starts it, what it reads, what it may change, and what stays human.</td></tr>
-<tr><td><code>Date:</code></td><td>A date inside 30 days, on a calendar, for a conversation that is in somebody's diary or is about to be.</td></tr>
-</table></div>
-</div>
-<div class="pb">
-<p>Then run the client half of the readout and take that with you. Same evidence, one page, in the words the person who signs uses: what it does, what it is fenced from doing, what is proved and by which check, what is not measured yet, your <code>Still broken:</code> line, and the 3 lines you just wrote.</p>
-<pre class="cmd"><span class="p">$ </span>python3 readout.py --client</pre>
-</div>
-<div class="pb">
-<h4>The proof pack, before you go</h4>
-<p>The named account is the ask. A repo nobody takes to a customer inside 30 days is a training exercise. Not a segment, not a vertical: a logo, a workflow you understand end to end, and a date on a calendar.</p>
-<p>You keep the repo, the eval cases and the grader. The grader is the half that travels, and it is the cheapest rehearsal available before a real pitch.</p>
-<div class="tbl"><table>
-<tr><th>What you record</th><th>Where it comes from</th></tr>
-<tr><td>The repo URL</td><td>Tagged <code>v1</code> when you shipped it.</td></tr>
-<tr><td>The six <code>PITCH.md</code> lines</td><td>Written at the pitch, sharpened when you pitched the client.</td></tr>
-<tr><td>Your two bench numbers</td><td><code>bench.py</code>, before and after.</td></tr>
-<tr><td>One named account, its use case, and a date inside 30 days</td><td><code>ACCOUNT.md</code>, 3 lines, committed. You. Nobody else can write this line.</td></tr>
-<tr><td>One page in the client's language</td><td><code>readout-client.html</code>, from <code>python3 readout.py --client</code>. What it does, what stops it, what is proved.</td></tr>
-<tr><td>What this agent cannot do, and what stops it</td><td>Appendix D, and the same table inside <code>readout-client.html</code>. Hand this one to a CIO.</td></tr>
-<tr><td>Anything you took past a gate</td><td>The stretch box on your build steps. Not scored.</td></tr>
-</table></div>
-</div>
+<p class="closer">Three lines in ACCOUNT.md and committed? That is the two sessions, done.</p>
 </section>
 <section class="chapter appendix" id="appendix-a">
 <span class="pill appx">Appendix</span><h2>A · Working in <strong>one repo</strong></h2>

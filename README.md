@@ -13,9 +13,9 @@ it did not. `guide/Larkspur-Build-Guide.pdf` is the same thing on paper.
 
 **The same steps run on the build site**, which your pod opens together in the
 room: <https://virtual.partnerbasecamp.com/build/>. It opens on the welcome too,
-and those three pages sit at the top of the left spine under **Start**, with a
-standing **Get set up** button in the right-hand panel so a laptop that breaks
-later can find it. It adds the build clock, a checklist per step, the
+and those three pages sit together under **Start**, the first of the site's
+tabs, with a standing **Get set up** button in the right-hand panel so a laptop
+that breaks later can find it. It adds the build clock, a checklist per step, the
 end-of-build ritual, and the box where you paste the evidence code a gate
 prints. Nothing uploads either way. Pick your surface once on Get set up and it
 stays picked.

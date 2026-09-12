@@ -54,7 +54,7 @@ STEP_NAMES = {
     "2.1": "Build 2 · Your own tool",
     "2.2": "Build 2 · The same tool, over MCP",
     "3.1": "Build 3 · Build the proof",
-    "4.1": "Build 4 · Pull the lever",
+    "4.1": "Build 4 · Make it scale",
 }
 STEP_IDS = list(STEP_NAMES)
 # Old id → new id. Setup is not a gate any more: setup.py owns it, so the old
