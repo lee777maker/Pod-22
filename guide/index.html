@@ -449,6 +449,21 @@ https://virtual.partnerbasecamp.com/build/</pre></div>
 <tr><td><code>reopen_stats</code></td><td>The 600 transcripts: how often this shape came back inside 72 hours.</td></tr>
 </table></div>
 </div>
+<div class="pb">
+<h4>Seven more, same rule</h4>
+<p>Every one of these is answered by a file already in <code>data/americas/</code> or a function already in <code>support/</code>, so none of them can invent a flight fact. Pick the one your pod argued for. Ask Claude Code to write the function off the file; the schema and its description are yours, and they are what the gate reads.</p>
+<p>Only <code>next_available_day</code> and <code>fare_rules</code> are served by the MCP server, so one of those two is the one to carry into step 2.2.</p>
+<div class="tbl"><table>
+<tr><th>Tool</th><th>The customer question it answers</th><th>Where the answer lives</th></tr>
+<tr><td><code>care_entitlements</code></td><td>Do I get a meal or a hotel while I wait?</td><td><code>disruption_policy.json</code> inputs and the Handbook section 6, care while you wait</td></tr>
+<tr><td><code>cause_in_plain_words</code></td><td>Why was my flight cancelled, in words I can repeat?</td><td><code>disruption_policy.json</code>, <code>cause_labels_customer</code></td></tr>
+<tr><td><code>departures_in_window</code></td><td>What is still leaving Denver this afternoon?</td><td><code>flights.csv</code>, filtered by origin, date and departure time</td></tr>
+<tr><td><code>seats_left</code></td><td>Is there room on that flight for the three of us?</td><td><code>flights.csv</code>, <code>seats_left_Y</code> and <code>seats_left_J</code></td></tr>
+<tr><td><code>ground_stop_status</code></td><td>Is Denver still stopped, and until when?</td><td><code>flights.csv</code> remarks and the fixture clock in <code>bookings.json</code></td></tr>
+<tr><td><code>hold_time_left</code></td><td>How long do I have before this seat is released?</td><td><code>support/mock_backend.py</code> holds and the fixture clock</td></tr>
+<tr><td><code>what_automation_will_not_do</code></td><td>Can you just cancel the whole trip for me?</td><td>The Handbook section 7, the list of things chat automation refuses</td></tr>
+</table></div>
+</div>
 <article class="step" id="step-2.1">
 <header><span class="id">2.1</span><h3>Your own tool, <strong>chosen unprompted</strong></h3></header>
 <div class="row building"><span class="k meta">What you are building</span><p>A tool the model never picks is a tool you never shipped.</p><p>Every schema you register goes out again on every turn, fired or not. One new capability is a permanent tax, and you are about to price it.</p></div>
