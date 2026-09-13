@@ -1,6 +1,6 @@
 # PITCH.md
 
-Six lines and a lever. Both of the last two are scored.
+Six lines and a lever. Your words. The last two are scored.
 
 Built:
 Does:

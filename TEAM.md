@@ -1,10 +1,9 @@
 # Pod: <your pod name>
 
-Whoever created this repo types the pod's name above and one line per person
-below, then commits it once. That is the roster. Nobody else has to do
-anything.
+Whoever made the repo types the pod name above and one name per line below,
+then commits it once. Nobody else has to touch this file.
 
-The review reads the names. Nothing else derives from this list: the pod
+The review reads these names. Nothing else comes off the list. Your pod still
 decides in the moment who does what.
 
 - <Name>
