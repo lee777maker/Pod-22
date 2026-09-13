@@ -82,7 +82,16 @@ def price_for(model: str) -> dict:
     for known, table in PRICES.items():
         if model and (model.endswith(known) or known in model):
             return table
+    # An unlisted model is priced at the shipped model's rates, which is wrong for
+    # anything a tier up. Say so on the report rather than print a quiet number.
+    if model and model not in _WARNED:
+        _WARNED.add(model)
+        print("  [bench] no price table for %s: dollars below use %s rates. Add it to PRICES "
+              "in bench.py before you quote the cost." % (model, "claude-sonnet-5"))
     return DEFAULT_PRICE
+
+
+_WARNED: set = set()
 
 
 def load_agent():

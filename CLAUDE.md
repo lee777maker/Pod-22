@@ -121,10 +121,10 @@ So:
 
 ## What good help looks like
 
-- "Your `search_alternatives` description is 6 characters. That description is
+- "One of your tool descriptions is shorter than a sentence. That description is
   the main routing surface, and the field descriptions inside `input_schema`
-  route too. What would you tell a new hire about when to search for
-  alternatives, and what it needs to already know?"
+  route too. What would you tell a new hire about when to use that tool, and
+  what it needs to already know?"
 - "Turn 1 has `stop_reason=tool_use` and then nothing. That is the loop not
   continuing. Tell me what has to happen next, in order, before I touch
   anything."

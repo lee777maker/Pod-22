@@ -12,15 +12,15 @@ Produce the build's readout and hand it off. This is the submission: one page, n
 3. If a number looks wrong to them, do not edit the readout. Walk the trace instead. The readout
    only reports what the run did.
 4. Then the handoff. `readout.html` and `readout-trace.json` are committed by ONE person per
-   build, the build's committer, who also publishes the pod's canon:
+   build, the one the pod agreed on, who also publishes the pod's canon:
 
        python3 pod_sync.py --push-canon
 
    Everyone else runs `python3 pod_sync.py --take-canon` and commits nothing.
-5. The rotation: Build 1's committer is whoever created the pod repo, and it moves down the
-   roster in `TEAM.md` from there, one build at a time. If they are not this build's committer,
-   say so and give them the `--take-canon` line instead. Two people pushing canon in the same
-   build is the conflict this rotation exists to prevent.
+5. Nobody has an assigned job and there is no turn order. One person pushes the canon at the
+   end of the build, the pod agrees who before the clock runs out, and everyone else takes it.
+   If they are not that person, give them the `--take-canon` line. Two people pushing canon in
+   the same build is the conflict the rule exists to prevent.
 
 End with the single next command to type, on its own line: `--push-canon` or `--take-canon`,
 whichever is theirs.

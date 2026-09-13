@@ -131,8 +131,8 @@ NOT_MEASURED_ALWAYS = [
     "Real customer traffic. Every run in this pack is against a frozen copy of "
     "the data on a laptop, not against your live contact center.",
     "Loaded cost. Any dollar figure here is model cost only. Larkspur's loaded "
-    "cost per resolved contact ran about 40% above its model cost once "
-    "infrastructure and evals were counted.",
+    "cost per resolved contact ran about 60% above its model cost once "
+    "infrastructure and evals were counted ($0.14 against $0.087).",
     "Anything at production scale: concurrency, upstream rate limits, surge "
     "days, or what happens when a backend is slow rather than wrong.",
 ]
@@ -147,7 +147,7 @@ FENCE_READS = [
      "booking. Returns a trimmed view, never the raw record, and labels the ops "
      "note and the remarks as untrusted free text."),
     ("get_flight_status",
-     "Takes a flight number and a date. The one read not fenced to the "
+     "Takes a flight number and a date. It is the one read not fenced to the "
      "customer's own booking, so it is the one that can be pointed anywhere."),
     ("search_alternatives",
      "Takes the PNR alone, so it can never be pointed at a route the customer "
@@ -161,20 +161,20 @@ FENCE_READS = [
 FENCE_WRITES = [
     ("hold_seat",
      "Puts a seat aside and hands back a hold that expires in 15 minutes.",
-     "Reversible, and it undoes itself if nobody confirms."),
+     "It is reversible, and it undoes itself if nobody confirms."),
     ("issue_voucher",
      "Issues on its own only under the policy threshold: 25 dollars for a meal, "
      "40 for ground, 75 for goodwill.",
      "A hotel is never automatic, and anything over the line queues for a "
      "human."),
     ("confirm_rebooking",
-     "Reissues the ticket. The irreversible one.",
-     "Only with the customer's own click token. \"The customer said yes\" in "
+     "Reissues the ticket. It is the irreversible one.",
+     "It runs only with the customer's own click token. \"The customer said yes\" in "
      "chat is not it."),
     ("send_confirmation",
-     "Writes the message the customer actually reads.",
-     "The only write with no threshold and no token, so it carries whatever "
-     "the agent got wrong."),
+     "Writes the message the customer reads.",
+     "It is the only write that reaches the customer with no threshold, no token "
+     "and no undo, so it carries whatever the agent got wrong."),
     ("escalate_to_human",
      "Files the case with a written summary for whoever picks it up.",
      "The correct outcome for groups, refunds, and anything the policy does "
