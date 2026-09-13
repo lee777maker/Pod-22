@@ -265,12 +265,25 @@ let lastHold = null;
 const sel = $('preset');
 PRESETS.forEach((p,i) => {
   const o = document.createElement('option');
-  o.value = i; o.textContent = p[1] + ' · ' + p[2];
+  o.value = i; o.textContent = p[0] + ' · ' + p[1] + ' · ' + p[2];
   sel.appendChild(o);
 });
+// The dropdown and the booking field are one choice. Picking an option fills the
+// booking number and, unless the message box holds something typed by hand, the
+// message. Typing a booking number moves the dropdown to match, or clears it.
+const PRESET_MSGS = new Set(PRESETS.map(p => p[3]));
 sel.onchange = () => {
   const p = PRESETS[sel.value];
-  $('pnr').value = p[0]; $('msg').value = p[3];
+  $('pnr').value = p[0];
+  const m = $('msg').value.trim();
+  if (!m || PRESET_MSGS.has(m)) $('msg').value = p[3];
+  $('pnr').title = '';
+};
+$('pnr').oninput = () => {
+  const v = $('pnr').value.trim().toUpperCase();
+  const i = PRESETS.findIndex(p => p[0] === v);
+  sel.selectedIndex = i;
+  $('pnr').title = i < 0 ? 'Not in the list: no last name will be sent with it.' : '';
 };
 
 function bubble(cls, text) {
@@ -291,7 +304,8 @@ function metaLine(text) {
 // A neutral card, on sand, in ink. `api` and `backend` show the source's own
 // words. Only `bug` carries a traceback, and it stays folded until asked for.
 const KIND_LABEL = {api: 'The API said no', backend: 'The backend said no',
-                    bug: 'Not a workshop step', empty: 'The answer came back empty'};
+                    bug: 'Not a workshop step', empty: 'The answer came back empty',
+                    down: 'The demo server is not running'};
 
 function errorCard(err) {
   $('empty')?.remove();
@@ -362,8 +376,7 @@ function confirmCard(hold) {
           body: JSON.stringify({hold_id: hold.hold_id, forge: b.dataset.a === 'forge'})
         }).then(x => x.json());
       } catch (e) {
-        r = {error: {kind:'bug', title:'The demo surface could not be reached',
-                     detail:String(e), hint:'This is not a workshop step; say so in the room.'}};
+        r = {error: {kind:'down', title:'Nothing is listening on localhost:4390', hint:'Start it again in its own terminal tab: python3 demo/serve.py, then reload this page.'}};
       }
       if (r.error) {
         errorCard(r.error);
@@ -414,9 +427,7 @@ async function send() {
     if (d.held) { lastHold = d.held; confirmCard(d.held); }
   } catch (err) {
     pending.remove();
-    errorCard({kind:'bug', title:'The demo surface could not be reached',
-               detail:String(err),
-               hint:'This is not a workshop step; say so in the room.'});
+    errorCard({kind:'down', title:'Nothing is listening on localhost:4390', hint:'Start it again in its own terminal tab: python3 demo/serve.py, then reload this page.'});
   }
   $('send').disabled = false;
   $('msg').select();
@@ -433,7 +444,18 @@ function fmt(v, unit) {
 
 async function loadEvidence() {
   let e;
-  try { e = await fetch('/api/evidence').then(r => r.json()); } catch { return; }
+  // The poll runs every few seconds, so a stopped server says so once, not
+  // once per tick. The next successful poll clears the way for saying it again.
+  try { e = await fetch('/api/evidence').then(r => r.json()); }
+  catch (err) {
+    if (!window._downSaid) {
+      window._downSaid = true;
+      errorCard({kind:'down', title:'Nothing is listening on localhost:4390',
+                 hint:'Start it again in its own terminal tab: python3 demo/serve.py, then reload this page.'});
+    }
+    return;
+  }
+  window._downSaid = false;
   if (e.error) return;
 
   $('whoami').textContent = e.name ? e.name : '';
