@@ -9,7 +9,7 @@ each tool and the loop that drives them.
 build**, which is the case study, then the three questions your pod answers out
 loud, then **Get set up**. After that it is the build page by page. What you are
 building, what to do, what it looks like when it worked, and where to look when
-it did not. `guide/Larkspur-Build-Guide.pdf` is the same thing on paper.
+it did not. `guide/Participant-Guide.pdf` is the same thing on paper.
 
 **The same steps run on the build site** at
 <https://anthropicpartnerbasecamp.bts.com/>, which your pod opens together in
