@@ -809,7 +809,7 @@ def step_6(args) -> List[Check]:
 def _build2_probe() -> tuple:
     """The pod's own Build 2 probe: (pnr, last_name, message, warning-or-None).
 
-    One customer message the pod's new tool exists to answer, in
+    One customer message the tools the pod wrote exist to answer, in
     build2_probe.txt at the repo root (three lines: PNR, last name, message).
     It lives at the root, not in .workshop/, because it is a pod artifact. One
     person writes the question and everybody's gate runs it. Writing that
@@ -893,14 +893,22 @@ def step_7(args) -> List[Check]:
                         "the model chose a new tool on a conversation that needs it (%s, "
                         "attempt %d of %d)" % (", ".join(called_new) or "not called",
                                                used, attempts),
-                        hint="Three attempts, none of them reached for your tool. That is a "
-                             "routing result, not bad luck. Two suspects, in order: the "
-                             "description, including the field descriptions inside "
+                        hint="Three attempts, none of them reached for any tool the pod wrote. "
+                             "That is a routing result, not bad luck. Two suspects, in order: "
+                             "the descriptions, including the field descriptions inside "
                              "input_schema (an over-constrained argument description is a "
                              "routing failure that looks like judgement), then the probe. "
-                             "Write the one customer message your tool exists to answer into "
-                             "build2_probe.txt at the repo root (three lines: PNR, last name, "
-                             "message)."))
+                             "Write the one customer message the pod's tools exist to answer "
+                             "into build2_probe.txt at the repo root (three lines: PNR, last "
+                             "name, message)."))
+    # 14 Sep 2026: the pod writes one tool per person now, and this gate can only
+    # prove routing on the one shared probe. Name the tools that went unproven,
+    # so a pass is never read as all of them having been chosen.
+    checks.append(note("(the pod wrote %d tool(s): %s. Chosen on this probe: %s. One is all the "
+                       "gate needs. Every other one is unproven until whoever wrote it runs the "
+                       "question their own tool exists to answer.)"
+                       % (len(new_names), ", ".join(sorted(new_names)),
+                          ", ".join(sorted(called_new)) or "none")))
     checks.append(Check(bool(result), "returned a non-empty string"))
     summary = tracer.summary() if tracer else {}
     # The ordinal is computed from the list that actually went out, so it can
