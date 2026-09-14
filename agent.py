@@ -6,7 +6,7 @@ before the code does, so read the trace first:
     python3 run.py K7PQ2M --trace
 
 Where you edit:   grep -n '✏' agent.py   (six marks, one per place)
-Steps and gates:  https://virtual.partnerbasecamp.com/build/
+Steps and gates:  https://anthropicpartnerbasecamp.bts.com/
 """
 from __future__ import annotations
 from typing import Any, Dict, List

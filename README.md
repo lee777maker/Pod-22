@@ -12,7 +12,7 @@ building, what to do, what it looks like when it worked, and where to look when
 it did not. `guide/Larkspur-Build-Guide.pdf` is the same thing on paper.
 
 **The same steps run on the build site** at
-<https://virtual.partnerbasecamp.com/build/>, which your pod opens together in
+<https://anthropicpartnerbasecamp.bts.com/>, which your pod opens together in
 the room. It opens on the welcome too, and the three Start pages sit under the
 first tab. The site adds the build clock at the top of the page and the box
 where you paste the evidence code a gate prints. Nothing uploads either way.

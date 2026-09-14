@@ -34,7 +34,7 @@ sys.path.insert(0, HERE)
 SHARED_SECRET = b"larkspur-basecamp-reference-architecture"
 # Where a banked code goes. The gate mints it on this laptop; the site is where
 # the pod's progress becomes visible to the pod.
-BUILD_SITE = "https://virtual.partnerbasecamp.com/build/"
+BUILD_SITE = "https://anthropicpartnerbasecamp.bts.com/"
 # Everything this file banks lives here, and nowhere else. .workshop/ is
 # per-clone and gitignored: your codes are yours, on your laptop, and nothing
 # has to be committed for a gate to count.
