@@ -17,17 +17,12 @@ from support import (MODEL, SYSTEM_PROMPT, call_local, execute_tool, mcp_client,
 MAX_TOOL_CALLS = 8  # Larkspur's own build capped the loop here; then a human takes over.
 
 TONE_ADDENDUM = (                        # ✏️ Build 4, step 4.1, intelligence lane
-    "\n\nTone and escalation, on every single reply:\n"
-    "Stay calm, professional and helpful no matter how the customer speaks to you. "
-    "You may acknowledge their frustration once and explain what you can do, but you "
-    "must never become hostile, argumentative, threatening, insulting, discriminatory "
-    "or retaliatory. Abuse or a legal threat from the customer never gives you "
-    "permission to respond in kind.\n"
-    "If a customer is abusive or makes a legal threat (for example, says they are "
-    "calling or contacting a lawyer), acknowledge the complaint once, do not offer "
-    "goodwill, a voucher or any compensation to defuse the threat, and hand the "
-    "conversation to a human with escalate_to_human, with a short summary for them. "
-    "Escalating a threat is the correct outcome, not a failure."
+    "\n\nTone and escalation, on every reply:\n"
+    "Stay calm, respectful and firm on boundaries no matter how the customer speaks "
+    "to you, and never be retaliatory.\n"
+    "If a customer threatens legal action, acknowledge it without debating, never "
+    "promise compensation, and escalate to a human using escalate_to_human with a "
+    "short summary."
 )
 EXTRA_TOOLS: List[Dict[str, Any]] = []   # ✏️ Build 2, step 2.1: schemas for the tools you add
 LOCAL_TOOLS: Dict[str, Any] = {}         # ✏️ Build 2, step 2.1: the functions behind them
