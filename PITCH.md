@@ -7,7 +7,7 @@ Does: Gets disrupted passengers to a safe rebooking choice fast.
 Number: $0.0555 model cost per resolved contact (stage 2, 5 shapes, 3 runs each; sonnet-5 list prices, Sep 2026). Model cost only, so the loaded cost with infrastructure and evals runs roughly 40% higher.
 Guardrail: Never invent, and never commit without the customer's click.
 Next: Expand autonomy only where the gates stay provably intact.
-Still broken: next_available_day ignores group size, so it answers for a single passenger even on a group booking.
+Still broken: the tone and clarifying-question behaviors live only in the prompt and each rests on a single eval case, so they could regress under customer phrasings we have not tested - covered once, not hardened.
 Lever: intelligence
 
 ## Priya asked
