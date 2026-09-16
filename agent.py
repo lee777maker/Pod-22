@@ -9,12 +9,33 @@ Where you edit:   grep -n 'âœ' agent.py   (six marks, one per place)
 Steps and gates:  https://anthropicpartnerbasecamp.bts.com/
 """
 from __future__ import annotations
+import re
 from typing import Any, Dict, List
 from support import (MODEL, SYSTEM_PROMPT, call_local, execute_tool, mcp_client,
                      new_session, next_available_day, record_tool_result,
                      runtime_preamble)
 
 MAX_TOOL_CALLS = 8  # Larkspur's own build capped the loop here; then a human takes over.
+
+# Cost lane, tiered inference: run routine disruptions on the cheap model and reserve the
+# capable model (support's MODEL, sonnet-5) for the cases our evals prove the cheap one
+# cannot hold: abuse, legal threats, refunds, out-of-scope, ambiguous connections, and
+# policy-rule challenges. Fail-safe: any risk word routes to the capable model. A
+# production version would swap this heuristic for a trained classifier and add
+# mid-conversation escalation when a benign chat turns.
+CHEAP_MODEL = "claude-haiku-4-5-20251001"
+_CAPABLE_TRIGGERS = re.compile(
+    r"\b(lawyer|sue|suing|legal|attorney|useless|ridiculous|disgrace|unacceptable|"
+    r"refund|money back|chargeback|"
+    r"group|minor|unaccompanied|partner|"
+    r"missed (my |the )?connection|missed connection|"
+    r"hotel|rule|policy|entitled|owed|compensation|voucher|goodwill)\b", re.I)
+
+
+def choose_model(message: str) -> str:
+    """Pick the model for this conversation. Capable model for risky/judgment-heavy
+    messages, cheap model for clear routine disruptions."""
+    return MODEL if _CAPABLE_TRIGGERS.search(message or "") else CHEAP_MODEL
 
 
 def next_available_day_for_party(pnr: str, cabin: str = "") -> Dict[str, Any]:
@@ -118,6 +139,8 @@ def run_agent(pnr: str, last_name: str, message: str) -> str:            # âœï¸
     """Run the tool loop until Claude stops asking for tools. Return its final text."""
     client, tracer = new_session()
     tools = tool_list()
+    model = choose_model(message)  # tiered inference: cheap model for routine, capable for risky
+    think = {} if "haiku" in model.lower() else {"thinking": {"type": "adaptive"}}  # haiku has no adaptive thinking
     # Cost lane (Build 4, second lever): the tool schemas and the system prompt are
     # byte-identical on every turn, so mark that stable prefix for prompt caching and
     # reuse the same objects across turns. The runtime preamble carries a per-call
@@ -135,8 +158,8 @@ def run_agent(pnr: str, last_name: str, message: str) -> str:            # âœï¸
     ]
 
     response = client.messages.create(
-        model=MODEL, max_tokens=4096, system=system,
-        thinking={"type": "adaptive"}, tools=tools, messages=messages,
+        model=model, max_tokens=4096, system=system,
+        tools=tools, messages=messages, **think,
     )
 
     turns = 1
@@ -144,8 +167,8 @@ def run_agent(pnr: str, last_name: str, message: str) -> str:            # âœï¸
         messages.append({"role": "assistant", "content": response.content})
         messages.append({"role": "user", "content": tool_results(response)})
         response = client.messages.create(
-            model=MODEL, max_tokens=4096, system=system,
-            thinking={"type": "adaptive"}, tools=tools, messages=messages,
+            model=model, max_tokens=4096, system=system,
+            tools=tools, messages=messages, **think,
         )
         turns += 1
 
