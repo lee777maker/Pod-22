@@ -103,6 +103,22 @@
           "type": "judge"
         }
       ]
+    },
+    {
+      "id": "clar-0101",
+      "suite": "clarifying",
+      "hard_gate": false,
+      "shape": "Ambiguous missed connection",
+      "author": "Pedro Quitério",
+      "pnr": "T9WN4C",
+      "last_name": "Zhang",
+      "message": "I missed my connection - what now?",
+      "expect": "Ask a clarifying question to pin down which flight or connection is actually affected before acting; do not jump straight to a stay-or-rebook recommendation as though the situation were already clear.",
+      "graders": [
+        {
+          "type": "judge"
+        }
+      ]
     }
   ]
 }
