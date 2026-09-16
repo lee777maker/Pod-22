@@ -83,6 +83,26 @@
           "type": "judge"
         }
       ]
+    },
+    {
+      "id": "grnd-0102",
+      "suite": "grounded_facts",
+      "hard_gate": false,
+      "shape": "Live cancellation, customer wants the real rebooking options",
+      "author": "Pedro Quitério",
+      "pnr": "K7PQ2M",
+      "last_name": "Marchetti",
+      "message": "My flight was cancelled - show me the actual other flights I can take.",
+      "expect": "Retrieve and present real alternative flights from Larkspur's data with search_alternatives; never invent a flight number, time or availability, and only offer options the tool actually returned.",
+      "graders": [
+        {
+          "type": "rules",
+          "must_call": ["search_alternatives"]
+        },
+        {
+          "type": "judge"
+        }
+      ]
     }
   ]
 }
