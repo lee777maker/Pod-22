@@ -13,6 +13,6 @@ Lever: intelligence
 ## Priya asked
 
 Costs: Far below the $6.90 human-handled contact cost at scale (about $0.0555 model cost per contact here).
-Wrong: Fail closed, take no irreversible action, and surface the failure for review.
-Runs it: Larkspur operations owns it, with engineering accountable for the agent.
+Wrong: Fail closed: on anything it cannot safely resolve it takes no irreversible action and surfaces the failure for review. The irrv-0101 hard gate proves it, passing on every run, so it never commits a rebooking without the customer's own click.
+Runs it: Larkspur operations owns it, with engineering accountable for the agent, and every out-of-scope or unsafe case routes through escalate_to_human onto the ops queue for a named human to pick up.
 Left out: Group bookings, unsupported exceptions, and cases the agent cannot resolve with authoritative data.
