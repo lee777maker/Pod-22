@@ -50,7 +50,13 @@ TONE_ADDENDUM = (                        # ✏️ Build 4, step 4.1, intelligenc
     "If the customer says they missed a connection but lookup_booking does not clearly "
     "identify which connection was missed, ask which inbound and onward flights they "
     "mean and whether the connection is already missed or only at risk. Do not check "
-    "policy, search alternatives, hold a seat, or recommend an action until they clarify."
+    "policy, search alternatives, hold a seat, or recommend an action until they clarify.\n"
+    "Before taking any action — including escalating to a human — always call check_policy "
+    "first so you know what the customer is entitled to. Then act according to what policy "
+    "says, and tell the customer exactly which policy rule applies and why it leads to the "
+    "outcome you are giving them. If you are unsure whether a situation is in scope or "
+    "whether policy covers it, escalate to a human with check_policy's policy_row_id "
+    "included in your summary so the human agent has the full picture."
 )
 EXTRA_TOOLS: List[Dict[str, Any]] = [    # ✏️ Build 2, step 2.1: schemas for the tools you add
     {

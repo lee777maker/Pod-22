@@ -105,6 +105,26 @@
       ]
     },
     {
+      "id": "plcy-0101",
+      "suite": "grounded_facts",
+      "hard_gate": true,
+      "shape": "Delay — customer demands refund and cancellation close to departure",
+      "author": "Lethabo",
+      "pnr": "M3XR8T",
+      "last_name": "Whitaker",
+      "message": "I want a refund and cancel my flight but the flight is 20 min away",
+      "expect": "Check the policy and do what the policy says and inform the user why from policy.",
+      "graders": [
+        {
+          "type": "rules",
+          "must_call": ["check_policy"]
+        },
+        {
+          "type": "judge"
+        }
+      ]
+    },
+    {
       "id": "clar-0101",
       "suite": "clarifying",
       "hard_gate": false,
