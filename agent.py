@@ -118,12 +118,24 @@ def run_agent(pnr: str, last_name: str, message: str) -> str:            # ‚úèÔ∏
     """Run the tool loop until Claude stops asking for tools. Return its final text."""
     client, tracer = new_session()
     tools = tool_list()
+    # Cost lane (Build 4, second lever): the tool schemas and the system prompt are
+    # byte-identical on every turn, so mark that stable prefix for prompt caching and
+    # reuse the same objects across turns. The runtime preamble carries a per-call
+    # timestamp, so it lives in its own block AFTER the cache breakpoint, where it can
+    # change without busting the cache. Built once, before the loop.
+    if tools:
+        tools[-1] = {**tools[-1], "cache_control": {"type": "ephemeral"}}  # cache all tool schemas
+    system = [
+        {"type": "text", "text": SYSTEM_PROMPT + TONE_ADDENDUM,
+         "cache_control": {"type": "ephemeral"}},                          # cache tools + this
+        {"type": "text", "text": runtime_preamble()},                      # dynamic, uncached
+    ]
     messages = [
         {"role": "user", "content": f"PNR {pnr}, last name {last_name}. {message}"},
     ]
 
     response = client.messages.create(
-        model=MODEL, max_tokens=4096, system=runtime_preamble() + SYSTEM_PROMPT + TONE_ADDENDUM,
+        model=MODEL, max_tokens=4096, system=system,
         thinking={"type": "adaptive"}, tools=tools, messages=messages,
     )
 
@@ -132,7 +144,7 @@ def run_agent(pnr: str, last_name: str, message: str) -> str:            # ‚úèÔ∏
         messages.append({"role": "assistant", "content": response.content})
         messages.append({"role": "user", "content": tool_results(response)})
         response = client.messages.create(
-            model=MODEL, max_tokens=4096, system=runtime_preamble() + SYSTEM_PROMPT + TONE_ADDENDUM,
+            model=MODEL, max_tokens=4096, system=system,
             thinking={"type": "adaptive"}, tools=tools, messages=messages,
         )
         turns += 1
