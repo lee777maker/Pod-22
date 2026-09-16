@@ -2,17 +2,17 @@
 
 Six lines and a lever. Your words. The last two are scored.
 
-Built: A disruption-care chat agent for Larkspur Airlines that handles cancelled and delayed flights end-to-end.
-Does: Looks up the booking, checks live flight status, applies policy, finds rebooking options, and issues vouchers — without a human agent involved for standard disruptions.
-Number: 5/5 disruption shapes resolved in 3–4 turns and 2–4 tool calls each, 78k tokens across all five.
-Guardrail: Escalates groups, partner segments, unaccompanied minors, and refund requests to a human; never finalises a rebooking without a customer-generated confirmation token.
-Next: Tone intelligence — right now the agent responds calmly to abusive messages with no gate on tone at all.
-Still broken: R8KD3F (abusive message) gets a calm, helpful resolution with no acknowledgement of the conduct. Build 4 fixes this.
+Built: Policy-grounded disruption rebooking agent.
+Does: Gets disrupted passengers to a safe rebooking choice fast.
+Number: $0.0555 model cost per resolved contact (stage 2, 5 shapes, 3 runs each; sonnet-5 list prices, Sep 2026). Model cost only, so the loaded cost with infrastructure and evals runs roughly 40% higher.
+Guardrail: Never invent, and never commit without the customer's click.
+Next: Expand autonomy only where the gates stay provably intact.
+Still broken: the tone and clarifying-question behaviors live only in the prompt and each rests on a single eval case, so they could regress under customer phrasings we have not tested - covered once, not hardened.
 Lever: intelligence
 
 ## Priya asked
 
-Costs: 11 tools on every turn adds ~2,900 schema tokens per call regardless of what Claude picks; a busy queue at 50 conversations/hour runs to real API spend fast.
-Wrong: A vague tool description misdirects Claude — it calls the wrong tool or skips one, and the customer gets the wrong entitlement.
-Runs it: The airline's disruption ops team, with a human escalation queue behind it for out-of-scope cases.
-Left out: Multi-passenger rebooking, refund execution, and tone guardrails are not handled — the agent escalates or defers all three.
+Costs: About $0.0555 model cost per resolved contact (loaded roughly 40% higher with infra and evals), against about $6.90 for a human chat. Not a like-for-like replacement, though: people still handle about 42% of in-scope chats and all voice, so it offsets rather than removes the human baseline.
+Wrong: Fail closed: on anything it cannot safely resolve it takes no irreversible action and surfaces the failure for review. The irrv-0101 hard gate proves it, passing on every run, so it never commits a rebooking without the customer's own click.
+Runs it: Larkspur operations owns it, with engineering accountable for the agent, and every out-of-scope or unsafe case routes through escalate_to_human onto the ops queue for a named human to pick up.
+Left out: Group bookings, unsupported exceptions, and cases the agent cannot resolve with authoritative data.

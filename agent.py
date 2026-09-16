@@ -16,9 +16,71 @@ from support import (MODEL, SYSTEM_PROMPT, call_local, execute_tool, mcp_client,
 
 MAX_TOOL_CALLS = 8  # Larkspur's own build capped the loop here; then a human takes over.
 
-TONE_ADDENDUM = ""                       # ✏️ Build 4, step 4.1, intelligence lane
-EXTRA_TOOLS: List[Dict[str, Any]] = []   # ✏️ Build 2, step 2.1: schemas for the tools you add
-LOCAL_TOOLS: Dict[str, Any] = {}         # ✏️ Build 2, step 2.1: the functions behind them
+
+def next_available_day_for_party(pnr: str, cabin: str = "") -> Dict[str, Any]:
+    """Pod-authored local tool (Build 2). Party-aware sibling of next_available_day:
+    that one answers for a single passenger, so on a group booking it can name a date
+    that cannot actually seat everyone. This reads the real passenger count and the
+    disrupted segment off the booking and only returns a date with seats for the whole
+    party."""
+    from support import mock_backend as backend
+    try:
+        booking = backend.get_booking_raw(pnr)
+    except backend.NotFound as exc:
+        return {"error": str(exc)}
+    seg = backend.get_disrupted_segment(booking)
+    pax = len(booking["passengers"])
+    cab = (cabin or seg["cabin"]).strip().upper()
+    found = backend.earliest_alternative_date(seg["origin"], seg["dest"], seg["date"], cab, pax)
+    if not found:
+        return {"error": "no date with %d seat(s) from %s to %s in cabin %s on or after %s"
+                         % (pax, seg["origin"], seg["dest"], cab, seg["date"])}
+    return {"pnr": pnr, "pax_count": pax, "origin": seg["origin"], "dest": seg["dest"],
+            "cabin": cab, "earliest_date_all_seated": found,
+            "note": "earliest date with an open seat for the whole party of %d" % pax}
+
+
+TONE_ADDENDUM = (                        # ✏️ Build 4, step 4.1, intelligence lane
+    "\n\nTone and escalation, on every reply:\n"
+    "Stay calm, respectful and firm on boundaries no matter how the customer speaks "
+    "to you, and never be retaliatory.\n"
+    "If a customer threatens legal action, acknowledge it without debating, never "
+    "promise compensation, and escalate to a human using escalate_to_human with a "
+    "short summary.\n"
+    "If the customer says they missed a connection but lookup_booking does not clearly "
+    "identify which connection was missed, ask which inbound and onward flights they "
+    "mean and whether the connection is already missed or only at risk. Do not check "
+    "policy, search alternatives, hold a seat, or recommend an action until they clarify."
+)
+EXTRA_TOOLS: List[Dict[str, Any]] = [    # ✏️ Build 2, step 2.1: schemas for the tools you add
+    {
+        "name": "next_available_day_for_party",
+        "description": (
+            "Find the earliest date with an open seat for EVERY passenger on the booking, "
+            "not just one. Use this instead of next_available_day whenever the booking has "
+            "more than one passenger (a family or a group), because next_available_day "
+            "answers for a party of one and can name a date that cannot actually seat the "
+            "whole party. Give it the PNR; it reads the passenger count and the disrupted "
+            "segment from the booking itself. Returns the earliest date that has seats for "
+            "the full party."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "pnr": {"type": "string"},
+                "cabin": {"type": "string", "description": "Optional cabin code (Y or J); defaults to the booked cabin"},
+            },
+            "required": ["pnr"],
+        },
+    },
+]
+LOCAL_TOOLS: Dict[str, Any] = {          # ✏️ Build 2, step 2.1: the functions behind them
+    "next_available_day_for_party": next_available_day_for_party,
+}
+# Build 2, step 2.2: next_available_day is served by the MCP server (support/mcp_server.py),
+# so its schema and function are not local here; tool_list() pulls it in over the wire via
+# mcp_client.tools(). next_available_day_for_party above stays local, per the guide's rule
+# that only one tool moves to MCP.
 
 
 def text_of(response) -> str:
@@ -75,6 +137,23 @@ def run_agent(pnr: str, last_name: str, message: str) -> str:            # ✏�
         )
         turns += 1
 
+    # If the loop stopped because it hit MAX_TOOL_CALLS while Claude was still asking
+    # for a tool, the final response is a tool_use turn that may carry no text at all.
+    # Create a real handoff rather than return an empty or half-finished reply.
+    if response.stop_reason == "tool_use":
+        handoff = execute_tool("escalate_to_human", {
+            "pnr": pnr,
+            "reason": "automatic handling reached its tool-call ceiling",
+            "summary_for_human": (
+                "The disruption-care agent reached its safety ceiling while handling "
+                "this conversation. Review the trace and continue from the gathered results."
+            ),
+        })
+        reference = handoff.get("escalation_id") if isinstance(handoff, dict) else None
+        suffix = " Reference: %s." % reference if reference else ""
+        return ("I wasn't able to finish this one automatically, so I've handed it to a "
+                "human agent who can continue with everything gathered so far." + suffix)
+
     return text_of(response)
 
 
@@ -125,12 +204,12 @@ def build_tools() -> List[Dict[str, Any]]:                 # ✏️ Build 1, ste
         {
             "name": "search_alternatives",
             "description": (
-                "Find alternative Larkspur flights to rebook this booking onto after a "
-                "disruption. Pass the PNR; origin, destination, original date, cabin and "
-                "party size are read from the booking's disrupted segment, not asked of you. "
-                "Returns a list of options, each with an option_id you then pass to hold_seat "
-                "and to check_policy's chosen_option_id. Call this before offering a customer "
-                "any specific rebooking; never invent flight times or option ids."
+                "Find alternative Larkspur flights to rebook this booking's disrupted "
+                "segment. Takes only the PNR; the origin, destination, date and cabin are "
+                "read from the affected segment on the booking, not asked of you. Returns a "
+                "list of rebooking options, each with an option_id you can pass to hold_seat "
+                "or confirm_rebooking. Reach for this once you know the segment is disrupted "
+                "and the customer wants to keep traveling."
             ),
             "input_schema": {
                 "type": "object",

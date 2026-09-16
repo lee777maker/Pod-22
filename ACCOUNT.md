@@ -1,15 +1,5 @@
 # ACCOUNT.md
 
-Account:
-Workflow:
-Date:
-
-Three lines, and nobody can write them for you.
-
-The account is a logo. Not a segment, not a vertical. The workflow is one job
-you understand end to end, the way you now understand a disruption chat. Who
-starts it, what it reads, what it may change, and what stays human. The date is
-inside 30 days, for a conversation already in somebody's diary or about to be.
-
-Write them before you close the laptop, while the build is still in your hands,
-and commit the file with the rest of the proof pack.
+Account: Larkspur Airlines
+Workflow: A passenger opens a disruption-care chat after a delay, cancellation or missed connection. The agent reads the authoritative records - the booking, live flight status, and the fare/policy rules - and can act on its own where the action is safe and reversible: look up the booking, check what the customer is owed, find and explain real alternatives, and place a 15-minute seat hold. It hands the irreversible and out-of-scope work to a person: confirming a rebooking (needs the customer's own click), refunds, group bookings, unaccompanied minors, partner segments, and any abusive or legal-threat conversation.
+Date: 2026-10-10
