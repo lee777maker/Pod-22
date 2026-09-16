@@ -46,7 +46,11 @@ TONE_ADDENDUM = (                        # ✏️ Build 4, step 4.1, intelligenc
     "to you, and never be retaliatory.\n"
     "If a customer threatens legal action, acknowledge it without debating, never "
     "promise compensation, and escalate to a human using escalate_to_human with a "
-    "short summary."
+    "short summary.\n"
+    "If the customer says they missed a connection but lookup_booking does not clearly "
+    "identify which connection was missed, ask which inbound and onward flights they "
+    "mean and whether the connection is already missed or only at risk. Do not check "
+    "policy, search alternatives, hold a seat, or recommend an action until they clarify."
 )
 EXTRA_TOOLS: List[Dict[str, Any]] = [    # ✏️ Build 2, step 2.1: schemas for the tools you add
     {
@@ -135,11 +139,20 @@ def run_agent(pnr: str, last_name: str, message: str) -> str:            # ✏�
 
     # If the loop stopped because it hit MAX_TOOL_CALLS while Claude was still asking
     # for a tool, the final response is a tool_use turn that may carry no text at all.
-    # Hand off to a human rather than return an empty or half-finished reply.
+    # Create a real handoff rather than return an empty or half-finished reply.
     if response.stop_reason == "tool_use":
-        return (text_of(response) or
-                "I wasn't able to finish this one automatically, so I'm handing you to a "
-                "human agent who can pick it up from here with everything gathered so far.")
+        handoff = execute_tool("escalate_to_human", {
+            "pnr": pnr,
+            "reason": "automatic handling reached its tool-call ceiling",
+            "summary_for_human": (
+                "The disruption-care agent reached its safety ceiling while handling "
+                "this conversation. Review the trace and continue from the gathered results."
+            ),
+        })
+        reference = handoff.get("escalation_id") if isinstance(handoff, dict) else None
+        suffix = " Reference: %s." % reference if reference else ""
+        return ("I wasn't able to finish this one automatically, so I've handed it to a "
+                "human agent who can continue with everything gathered so far." + suffix)
 
     return text_of(response)
 
